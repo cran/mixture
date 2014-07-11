@@ -1,6 +1,6 @@
-
-
 export(gpcm)
+export(m.step)
+export(e.step)
 
 S3method(print, gpcm)
 S3method(plot, gpcm)

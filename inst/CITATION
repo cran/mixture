@@ -13,28 +13,22 @@ citEntry(entry="Manual",
               textVersion = paste("Ryan P. Browne and Paul D. McNicholas (", year, "). mixture: Mixture Models for Clustering and Classification. ", vers, ".", sep="")
 )
 
-citEntry(entry = "TechReport",
+citEntry(entry = "Article",
      	title = "Estimating Common Principal Components in High Dimensions",
      	author = personList(as.person("Ryan P. Browne"),as.person("Paul D. McNicholas")),
-	textVersion = paste("Ryan P. Browne and Paul D. McNicholas (2013). Estimating Common Principal Components in High Dimensions. Arxiv preprint arXiv:1302.2102."),
-     	year = "2013",
-     	institution = "Arxiv preprint",
-     	number = "arXiv:1302.2102",
-)
-
-citEntry(entry = "Article",
-     	title = "Orthogonal Stiefel Manifold Optimization for Eigen-Decomposed Covariance Parameter Estimation in Mixture Models",
-     	author = personList(as.person("Ryan P. Browne"),as.person("Paul D. McNicholas")),
-	textVersion = paste("Ryan P. Browne and Paul D. McNicholas (2012). Orthogonal Stiefel Manifold Optimization for Eigen-Decomposed Covariance Parameter Estimation in Mixture Models. Statistics and Computing. To appear."),
-     	year = "2012",
-     	journal = "Statistics and Computing",
+	textVersion = paste("Ryan P. Browne and Paul D. McNicholas (2014). Estimating Common Principal Components in High Dimensions. Advances in Data Analysis and Classification 8(2), 217-226."),
+     	year = "2014",
+     	journal = "Advances in Data Analysis and Classification",
+     	volume = "8",
+	number = "2",
+	pages = "217-226", 
 )
 
 citEntry(entry = "Article",
      	title = "Gaussian Parsimonious Clustering Models",
      	author = personList(as.person("Gilles Celeux"),as.person("Gerard Govaert")),
 	textVersion = paste("Gilles Celeux and Gerard Govaert (1995). Gaussian Parsimonious Clustering Models. Pattern Recognition. 28(5), 781-793."),
-     	year = "2012",
+     	year = "1995",
      	journal = "Pattern Recognition",
      	volume = "28",
      	number = "5",

@@ -1,0 +1,6 @@
+mixture version 1.1 2014-07-11:
+
+- Function e.step exported and associated manual added
+- Function m.step exported and associated manual added
+- Minor edits and updates in inst/CITATION
+
