@@ -68,45 +68,41 @@ An object of class \code{gpcm} is a list with components:
 Dedicated \code{print}, \code{plot} and \code{summary} functions are available for objects of class \code{gpcm}.
 }
 \author{
-Ryan P. Browne and Paul D. McNicholas.
+Ryan P. Browne, Aisha ElSherbiny and Paul D. McNicholas.
 
 Maintainer: Ryan Browne <rbrowne@uoguelph.ca>
 }
 \references{
-Browne, R.P. and McNicholas, P.D. (2013). Estimating common principal components in high dimensions. Arxiv preprint arXiv:1302.2102
-
-Zhou, H. and Lange, K. (2010). On the bumpy road to the dominant mode. \emph{Scandinavian Journal of Statistics} \bold{37}, 612-631. 
+Browne, R.P. and McNicholas, P.D. (2014). Estimating common principal components in high dimensions. Advances in Data Analysis and Classification \bold{8}(2), 217-226.
 
 Celeux, G., Govaert, G. (1995). Gaussian parsimonious clustering models. \emph{Pattern Recognition} \bold{28}(5), 781-793.
 }
 \examples{
 data("x2")
-### use kmeans to find starting values
+
+# use k-means starts
 ax0 = gpcm(x2, G=1:5, mnames=c("VVV", "EVE"),start=0, pprogress=TRUE, atol=1e-2)
+ax0 = gpcm(x2, G=1:5, mnames=( "EVE"),start=0, pprogress=TRUE, atol=1e-2)
 summary(ax0)
 ax0
 
-
-### use 6 random values for starting values
+# use 6 random values for starting values
 #ax6 = gpcm(x2, G=1:5, mnames=c("VVV", "EVE"),start= 6)
 #summary(ax6)
 #ax6
 
-
-### use deterministic annealing for starting values
+# use deterministic annealing for starting values
 #axNULL = gpcm(x2, G=1:5, mnames=c("VVV", "EVE"), start=NULL)
 #summary(axNULL)
 #axNULL
 
-
-### use your deterministic annealing for starting values
+# use your deterministic annealing for starting values
 #vseq0 = rep(seq(.05, 1, length.out=5),each=2)
 #axv = gpcm(x2, G=1:5, mnames=c("VVV", "EVE"), start=vseq0)
 #summary(axv)
 #axv
 
-
-### Initialization using your own function 
+# Initialization using your own function 
 #igparhc <-  function(data=NULL, g=NULL,covtype=NULL) {
 #	lw = cutree(hclust(dist(data), "complete"),k=g)
 #	w = matrix(0, nrow=nrow(data), ncol=g)
@@ -117,21 +113,16 @@ ax0
 #summary(axhclust)
 #axhclust
 
-
-### estimate all 14 covariance structures 
-#ax = gpcm(x2, G=1:5, mnames=NULL, start=0)
+# Estimate all 14 covariance structures from k-means starts 
+#ax = gpcm(x2, G=1:5, start=0)
 #summary(ax)
 #ax
 
-### model based classification
+# model based classification
 #x2.label = numeric(nrow(x2))
 #x2.label[c(10,50, 110, 150, 210, 250)] = c(1,1,2,2,3,3)
 #plot(x2, col=x2.label)
 #axl = gpcm(x2, G=1:5, mnames=c("VVV", "EVE"), label=x2.label)
-
-
-
-
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

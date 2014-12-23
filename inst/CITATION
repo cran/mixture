@@ -1,5 +1,5 @@
 citHeader("To cite package 'mixture' in publications use:")
-     
+
      ## R >= 2.8.0 passes package metadata to citation().
      if(!exists("meta") || is.null(meta)) meta <- packageDescription("pgmm")
      year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date)
@@ -7,30 +7,30 @@ citHeader("To cite package 'mixture' in publications use:")
 
 citEntry(entry="Manual",
               title = "mixture: Mixture Models for Clustering and Classification",
-              author = personList(as.person("Ryan P. Browne"),as.person("Paul D. McNicholas")),
+              author = personList(as.person("Ryan P. Browne"),as.person("Aisha ElSherbiny"),as.person("Paul D. McNicholas")),
               year = year,
               note = vers,
-              textVersion = paste("Ryan P. Browne and Paul D. McNicholas (", year, "). mixture: Mixture Models for Clustering and Classification. ", vers, ".", sep="")
+              textVersion = paste("Ryan P. Browne, Aisha ElSherbiny and Paul D. McNicholas (", year, "). mixture: Mixture Models for Clustering and Classification. ", vers, ".", sep="")
 )
 
 citEntry(entry = "Article",
-     	title = "Estimating Common Principal Components in High Dimensions",
-     	author = personList(as.person("Ryan P. Browne"),as.person("Paul D. McNicholas")),
-	textVersion = paste("Ryan P. Browne and Paul D. McNicholas (2014). Estimating Common Principal Components in High Dimensions. Advances in Data Analysis and Classification 8(2), 217-226."),
-     	year = "2014",
-     	journal = "Advances in Data Analysis and Classification",
-     	volume = "8",
-	number = "2",
-	pages = "217-226", 
+     title = "Estimating Common Principal Components in High Dimensions",
+     author = personList(as.person("Ryan P. Browne"),as.person("Paul D. McNicholas")),
+textVersion = paste("Ryan P. Browne and Paul D. McNicholas (2014). Estimating Common Principal Components in High Dimensions. Advances in Data Analysis and Classification 8(2), 217-226."),
+     year = "2014",
+journal = "Advances in Data Analysis and Classification",
+     volume = "8",
+     number = "2",
+     pages  = "217-226",
 )
 
 citEntry(entry = "Article",
-     	title = "Gaussian Parsimonious Clustering Models",
-     	author = personList(as.person("Gilles Celeux"),as.person("Gerard Govaert")),
-	textVersion = paste("Gilles Celeux and Gerard Govaert (1995). Gaussian Parsimonious Clustering Models. Pattern Recognition. 28(5), 781-793."),
-     	year = "1995",
-     	journal = "Pattern Recognition",
-     	volume = "28",
-     	number = "5",
-     	pages  = "781-793",
+     title = "Gaussian Parsimonious Clustering Models",
+     author = personList(as.person("Gilles Celeux"),as.person("Gerard Govaert")),
+textVersion = paste("Gilles Celeux and Gerard Govaert (1995). Gaussian Parsimonious Clustering Models. Pattern Recognition 28(5), 781-793."),
+     year = "1995",
+     journal = "Pattern Recognition",
+     volume = "28",
+     number = "5",
+     pages  = "781-793",
 )

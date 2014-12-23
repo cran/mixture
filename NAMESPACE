@@ -1,7 +1,9 @@
+useDynLib(mixture,main_loop)
+
 export(gpcm)
 export(m.step)
 export(e.step)
-
 S3method(print, gpcm)
+
 S3method(plot, gpcm)
 S3method(summary, gpcm)

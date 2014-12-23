@@ -59,13 +59,13 @@ model.type <- function(modelname=NULL, Sk=NULL, ng=NULL, D=NULL, mtol=1e-10, mma
 
 
 gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE, nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, pprogress=FALSE, pwarning=TRUE) {
+        set.seed(102)
 	if (is.null(data)) stop('Hey, we need some data, please! data is null')
 	if (!is.matrix(data)) stop('The data needs to be in matrix form')
 	if (!is.numeric(data)) stop('The data is required to be numeric')
 	if (nrow(data) == 1) stop('nrow(data) is equal to 1')
 	if (ncol(data) == 1) stop('ncol(data) is equal to 1; This function currently only works with multivariate data p > 1')
 	if (any(is.na(data))) stop('No NAs allowed.')
-	
 	if (is.null(G)) stop('G is NULL')
 	G = as.integer(ceiling(G))
 	if (!is.integer(G)) stop('G is not a integer')
@@ -79,17 +79,22 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE,
 	model = NULL; curBIC = Inf;
 	for (g in 1:length(G)) {
 	for (i in 1:length(mnames)) {
-		if ( pprogress ) print(c(G[g],mnames[i]))
+#		if ( pprogress ) print(c(G[g],mnames[i]))
 		if (veo | npar.model(modelname=mnames[i], p=ncol(data), G=G[g]) < nrow(data)) {
-		a =	try( { EM(data=data, G=G[g], nmax=nmax, covtype=mnames[i], start=start, label=label, atol= atol, mtol=mtol, mmax=mmax ) }, pwarning)
-
-		if ( length(a) > 1) {
+        a =	try( { EM(data=data, G=G[g], nmax=nmax, covtype=mnames[i], start=start, label=label, atol= atol, mtol=mtol, mmax=mmax ) }, pwarning)
+#        a =	EM(data=data, G=G[g], nmax=nmax, covtype=mnames[i], start=start, label=label, atol= atol, mtol=mtol, mmax=mmax)
+		if(length(a)>1){
 			bic[g,i,1:2] = c(a$loglik[length(a$loglik)], npar.model(modelname=mnames[i], p=ncol(data), G=G[g]) )
 			bic[g,i,3] =  -2*bic[g,i,1] + bic[g,i,2]*log(nrow(data)) 
-			if ( bic[g,i,3] < curBIC) {
-				model  = append(a,list(mtype=mnames[i]))
-				curBIC = bic[g,i,3] 
-				}
+#			cat(bic[g,i,1],bic[g,i,3], curBIC, "\n")
+			if (is.nan(bic[g,i,3])){
+				bic[g,i,1:2] = c(NA, npar.model(modelname=mnames[i], p=ncol(data), G=G[g]) )
+				bic[g,i,3] =  NA
+			}
+			else if ( bic[g,i,3] < curBIC) {
+					model  = append(a,list(mtype=mnames[i]))
+					curBIC = bic[g,i,3] 
+			}
 		} else {
 			bic[g,i,1:2] = c(NA, npar.model(modelname=mnames[i], p=ncol(data), G=G[g]) )
 			bic[g,i,3] =  NA
@@ -108,7 +113,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE,
 	else if ( start == 0) startobject= "k-means"
 	else if ( start > 0) startobject= paste( start, " random initializations", collapse="" )
 	
-	bicModel = list(G=length(model$gpar$pi), covtype=model$mtype, bic=curBIC )
+	bicModel = list(G=model$G, covtype=model$mtype, bic=curBIC )
 	val = list( start=start, startobject= startobject, gpar=model$gpar, loglik=model$loglik, z=model$z, map=model$MAP, BIC=bic, bicModel= bicModel)
 #	val = list( model=model, BIC=bic, bicModel= bicModel)
 	
@@ -119,7 +124,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE,
 
 print.gpcm <-function(x, ...){
 #    a = object$BIC[,,1]
-    cat("The model choosen by applying the BIC criteria has ", x$bicModel$G, "component(s) and the ", x$bicModel$covtype, "covariance structure\n using ", x$startobject, "\n"  )
+    cat("The model choosen by applying the BIC criteria has", x$bicModel$G, "component(s) and the", x$bicModel$covtype, "covariance structure\n using", x$startobject, "starts. \n"  )
     #endPrint(a)
 }
 summary.gpcm <- function(object, ...){
@@ -144,10 +149,6 @@ plot.gpcm <- function(x, ...) {
 }
 
 
-
-
-
-
 igpar = function(data=NULL, g=NULL, covtype=NULL, start=NULL, labels=NULL, mtol=NULL, mmax=NULL) {
 	if (is.null(start)) start = seq( 0.1, 1, length.out=5)
 
@@ -170,6 +171,30 @@ igpar = function(data=NULL, g=NULL, covtype=NULL, start=NULL, labels=NULL, mtol=
 	gpar = m.step(data=data, covtype=covtype, w=w, v=1, mtol=mtol, mmax = mmax)
 	return(gpar)
 }
+
+
+igpar_1 = function(data=NULL, g=NULL, covtype=NULL, start=NULL, labels=NULL, mtol=NULL, mmax=NULL) {
+        if (is.null(start)) start = seq( 0.1, 1, length.out=5)
+
+        if (is.function(start) ) w = start(data=data, g=g, covtype=covtype)
+        else if ( !is.null(dim(start)) ) w = start
+        else if (length(start) > 1) w = igparv(data=data, g=g, covtype=covtype, vseq0=start , mtol=mtol, mmax = mmax, labels=labels)
+        else if (start == 0) w = igpark(data=data, g=g, covtype=covtype)
+        else if (start >  0) w = rgpar(data=data, g=g, covtype=covtype, n=ceiling(start), labels=labels, mtol=mtol, mmax = mmax )
+        else stop(paste('Initialization method ', start, " does not compute!"))
+
+        if (!is.matrix(w)) stop("The zij initialization matrix is not a matrix")
+        if (any(w < 0)) stop("Some of the elements of the zij initialization matrix are less than zero")
+#       if ( any(apply(w,1,sum) !=1)  ) stop("Some of the rows of the zij initialization matrix do not sume to 1")
+        if (nrow(w) < nrow(data) ) stop("The nrow(zij) of the initialization matrix is less than nrow(data)")
+        if (nrow(w) > nrow(data) ) stop("The nrow(zij) of the initialization matrix is greater than nrow(data)")
+        if (ncol(w) < g ) stop("The nrow(zij) of the initialization matrix is less than  match g")
+        if (ncol(w) > g ) stop("The nrow(zij) of the initialization matrix is greater than  match g")
+        w = combinewk(w, label=labels)
+        return(w)
+}
+
+
 
 igparv <- function(data=NULL, g=NULL,covtype=NULL, vseq0=NULL, labels=NULL, mtol=NULL, mmax = NULL) {
 	vseq0 = as.numeric(vseq0)
@@ -222,38 +247,27 @@ igpark <- function(data=NULL, g=NULL,covtype=NULL) {
 
 
 
-
-
+run_em<- function(N,p,G,z,nmax,atol,mtol,mmax,x,label,covtype,logl,counter,MAPP){
+    if(is.null(label)){ label<-c(rep(1,N));}
+    temp_em<-.C("main_loop", as.integer(N), as.integer(p), as.integer(G), as.double(z), as.integer(nmax), as.double(atol), as.double(mtol),
+    as.integer(mmax), as.double(x), as.integer(label), as.character(covtype), as.double(logl), as.integer(counter), as.integer(MAPP), PACKAGE="mixture")
+    list(z=temp_em[[4]],logl=temp_em[[12]],counter=temp_em[[13]],MAPP=temp_em[[14]])
+}
 
 EM <- function(data=NULL, gpar0=NULL, G=2, start=1, label=NULL, covtype=NULL, nmax=1000, atol=1e-8, mtol=1e-8, mmax=10 ) {
-	val        = list()
-	if (is.null(gpar0)) val$gpar = igpar(data=data, g=G, covtype=covtype, start=start, labels=label, mtol=mtol, mmax=mmax)
-	else val$gpar = gpar0	
-	val$loglik = numeric(nmax)
-
-	val$loglik[1] = loglik(data=data, gpar=val$gpar)
- 	tempw    = e.step(data=data, gpar=val$gpar, labels=label)
- 	val$gpar = m.step(data=data, covtype=covtype, w=tempw, mtol=mtol, mmax=mmax)
-	val$loglik[2] = loglik(data=data, gpar=val$gpar)
- 	tempw    = e.step(data=data, gpar=val$gpar, labels=label)
- 	val$gpar = m.step(data=data, covtype=covtype, w=tempw, mtol=mtol, mmax=mmax)
-	val$loglik[3] = loglik(data=data, gpar=val$gpar)
-	i  =  3
-
-	while ( ( getall(val$loglik[(i-2):i]) > atol) & (i < (nmax) ) )  {
-		i = i+1
- 		tempw    = e.step(data=data, gpar=val$gpar, labels=label)
-		val$gpar = m.step(data=data, covtype=covtype, w=tempw, D=val$gpar$D, mtol=mtol, mmax=mmax)
-		val$loglik[i] = loglik(data=data, gpar=val$gpar)
-	}
-
-	val$loglik = val$loglik[1:i]
-	val$z = e.step(data=data, gpar=val$gpar, labels=label) 
-	val$MAP = MAP(data=data, gpar=val$gpar, label=label) 
-	return(val)
-	}
-
-
+     w = igpar_1(data=data, g=G, covtype=covtype, start=start, labels=label, mtol=mtol, mmax=mmax)
+     val = list()
+     MAPP<- rep(0,nrow(data))
+     logl <- rep(0, nmax)
+     counter =0
+     temp<- run_em(nrow(data),ncol(data),G,w,nmax,atol,mtol,mmax,data,label,covtype,logl,counter,MAPP)
+     val$loglik = temp$logl[1:temp$counter]
+     val$z = temp$z
+     z <-matrix(val$z,nrow=nrow(data), ncol=G, byrow= TRUE)
+     val$MAP = temp$MAPP
+     val$G = G
+     return(val)
+}
 
 
 
@@ -385,6 +399,7 @@ MAP <- function(data, gpar, label=NULL) {
 	
 
 combinewk <- function(weights=NULL, label=NULL)	{
+#        cat("label is",label,"\n")
 	# known is a numeric with 
 	# 0 if unknown group membership 
 	# 1,2,3,.. for label of known group
@@ -942,3 +957,6 @@ msEVV <- function(Sk=NULL, ng=NULL, eplison=1e-12, max.iter= 100) {
 
 
 
+#        cat("N=","\n")
+#        logl<-c(1:nmax)
+#        cat(nrow(data),"\n")
