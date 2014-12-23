@@ -4,7 +4,7 @@
 \description{
 Carries out the M-step for EM algorithm}
 \usage{
-m.step(data=NULL, covtype=NULL, w=NULL, v=1, D=NULL, mtol=NULL, mmax=NULL)
+m.step(data=NULL, covtype=NULL, w=NULL, D=NULL, mtol=NULL, mmax=NULL)
 }
 \arguments{
   \item{data}{
@@ -15,9 +15,6 @@ A matrix or data frame such that rows correspond to observations and columns cor
 }
   \item{w}{
 	A nxG matrix of weights. 
-}
-  \item{v}{
-	The value for deterministic annealing. If v=1 the standard estimate is used.
 }
   \item{D}{
 	An initial value for D. If \code{NULL} then the identity matrix is used.
@@ -38,7 +35,7 @@ A list of the model parameters with the \code{mu}, \code{sigma},  \code{invsigma
  \examples{
 data("x2")
 u0 = runif(nrow(x2))
-m.step(data=x2, covtype="VVV", w=cbind(u0,1-u0), v=1, D=NULL, mtol=1e-8, mmax=10)
+m.step(data=x2, covtype="VVV", w=cbind(u0,1-u0), D=NULL, mtol=1e-8, mmax=10)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

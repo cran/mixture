@@ -29,7 +29,7 @@ A nxG matrix of weights.
 \examples{
 data("x2")
 u0 = runif(nrow(x2))
-m0 = m.step(data=x2, covtype="VVV", w=cbind(u0,1-u0), v=1, D=NULL, mtol=1e-8, mmax=10)
+m0 = m.step(data=x2, covtype="VVV", w=cbind(u0,1-u0), D=NULL, mtol=1e-8, mmax=10)
 w0 = e.step(data=x2, gpar=m0, labels=NULL, v=1)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
