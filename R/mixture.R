@@ -58,7 +58,7 @@ model.type <- function(modelname=NULL, Sk=NULL, ng=NULL, D=NULL, mtol=1e-10, mma
 }
 
 
-gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE, nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, pprogress=FALSE, pwarning=TRUE) {
+gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE, nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, pprogress=FALSE, pwarning=FALSE) {
         set.seed(102)
 	if (is.null(data)) stop('Hey, we need some data, please! data is null')
 	if (!is.matrix(data)) stop('The data needs to be in matrix form')
@@ -117,7 +117,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE,
 	else if ( start > 0) startobject= paste( start, " random initializations", collapse="" )
 	
 	bicModel = list(G=model$G, covtype=model$mtype, bic=curBIC )
-	val = list( start=start, startobject= startobject, gpar=model$gpar, loglik=model$loglik, z=model$z, map=model$MAP, BIC=bic, bicModel= bicModel)
+	val = list( start=start, startobject= startobject, gpar=model$gpar, loglik=model$loglik, z=model$z, map=model$map, BIC=bic, bicModel= bicModel)
 #	val = list( model=model, BIC=bic, bicModel= bicModel)
 	
     class(val)<-"gpcm"
@@ -187,7 +187,6 @@ igparv <- function(data=NULL, g=NULL, covtype=NULL, vseq0=NULL, labels=NULL, mto
 
 
 
-
 rgpar <- function(data=NULL, g=NULL, covtype=NULL, n=1, labels=NULL, mtol=NULL, mmax = NULL) {
 	rn = 5;
 	w.old    = rwgpar(data=data, g=g,covtype= covtype, labels=labels)
@@ -221,7 +220,7 @@ rwgpar <- function(data=NULL, g=NULL,covtype=NULL, labels=NULL) {
 igpark <- function(data=NULL, g=NULL, covtype=NULL) {
 	if (g==1) w = matrix(0,nrow=nrow(data),ncol=1)
 	else {
-	lw = kmeans(x=data, centers=g, iter.max=10)$cluster
+	lw = kmeans(x=data, centers=g, iter.max= 25 )$cluster
 	w  = combinewk(matrix(0,nrow=nrow(data),ncol=g), label=lw)
 	}
 	return(w)
@@ -229,29 +228,58 @@ igpark <- function(data=NULL, g=NULL, covtype=NULL) {
 
 
 
-run_em <- function(x=NULL, G=NULL, z=NULL,nmax=NULL,atol=NULL,mtol=NULL,mmax=NULL,label=NULL,covtype=NULL){
+
+
+run_em <- function(x=NULL, G=NULL, z=NULL, nmax=NULL, atol=NULL, mtol=NULL, mmax=NULL, label=NULL, covtype=NULL){
 	if (!is.matrix(data)) as.matrix(x)
     N = nrow(x)
     p = ncol(x)
     if (is.null(label) ) label = rep(1,N)	
-	MAPP = numeric(nrow(x))
+    MAPP = numeric(N)
     logl = numeric(nmax)
-	counter = 0
+    counter = 0
+    sigmar    = matrix(0, nrow=G, ncol=p^2 )
+    invsigmar = matrix(0, nrow=G, ncol=p^2 )
+    mu = matrix(0, nrow = G, ncol=p )    
+    D = matrix(0, nrow = p, ncol=p )    
+    pi = numeric(G)
+    
+    temp_em<-.C("main_loop", as.integer(N), as.integer(p), as.integer(G), as.double(z),
+        as.double(sigmar), as.double(invsigmar), as.double(mu), as.double(pi), 
+        as.integer(nmax), as.double(atol), as.double(mtol),
+        as.integer(mmax), as.double(x), as.integer(label), as.character(covtype), 
+        as.double(logl), as.integer(counter), as.integer(MAPP), as.double(D), PACKAGE="mixture")
 
-    temp_em = .C("main_loop", as.integer(N), as.integer(p), as.integer(G), as.double(z), as.integer(nmax), as.double(atol), as.double(mtol), as.integer(mmax), as.double(x), as.integer(label), as.character(covtype), as.double(logl), as.integer(counter), as.integer(MAPP), PACKAGE="mixture")
-    #val = list(z=as.double(temp_em[[4]]), logl=as.double(temp_em[[12]]), counter = as.integer(temp_em[[13]]),MAPP=as.integer(temp_em[[14]]) )
-    val = temp_em[c(4,12,13,14)]
-    names(val) = c('z', 'loglik', 'iterations', 'MAP')
-   #  cat("val4aa0, ")
-   # cat("counter =", val$iterations, "nmax=", nmax)
-	if (val$iterations < nmax) val$loglik = val$loglik[1:val$iterations]
-   	val$loglikn = val$loglik[val$iterations]
-    # cat("val4aa2, ")
-     val$z = matrix(val$z, nrow=N, ncol=G)
-    # cat("val4aa3, ")
-     val$G = G
+    z        = matrix(temp_em[[4]], nrow=N, ncol=G)
+	num.iter = temp_em[[17]]
+    map      = temp_em[[18]]
+    DD       = temp_em[[19]]
+    loglik   = temp_em[[16]]
+    loglik   = loglik[1:num.iter]
+    loglikn  = loglik[num.iter]
+
+    sigma    = array(temp_em[[5]], dim= c(p,p,G) ) 
+    invsigma = array(temp_em[[6]], dim= c(p,p,G) )
+    mu       = matrix(temp_em[[7]], nrow=p, ncol=G, byrow=TRUE)
+    pi       = temp_em[[8]]
+
+    gpar= list()
+	for (k in 1:G ) {
+		gpar[[k]] = list()		
+		gpar[[k]]$mu       = mu[,k]
+		gpar[[k]]$sigma    = sigma[,,k]
+		gpar[[k]]$invSigma = invsigma[,,k]
+		gpar[[k]]$logdet   = log(det(sigma[,,k]))
+
+	}
+	gpar$pi = temp_em[[8]]	
+	if (covtype == "EVE") gpar$D  = matrix(DD, nrow=p, ncol=p)
+	if (covtype == "VVE") gpar$D  = matrix(DD, nrow=p, ncol=p)	
+
+    val = list(z=z, loglik=loglik, gpar = gpar, loglikn=loglikn, num.iter = num.iter, map=map, G=G, mtype= covtype)
     return(val)
 }
+
 
 
 
@@ -286,7 +314,7 @@ EMp1 <- function(data=NULL, covtype=NULL) {
 	zlog = -1/2*mahalanobis(x=data, center=gpar[[1]]$mu, cov=gpar[[1]]$invSigma, inverted=TRUE) -1/2*gpar[[1]]$logdet - d/2*(log(2)+log(pi))
 	loglik = sum(zlog)	
 	
-	val = list(gpar=gpar, z=matrix(w,nrow=nrow(data), ncol=1), iterations=1, loglik=loglik, loglikn=loglik, MAP=w, G=1)
+	val = list(gpar=gpar, z=matrix(w,nrow=nrow(data), ncol=1), iterations=1, loglik=loglik, loglikn=loglik, map=w, G=1, mtype=covtype)
 	return(val)
 	}
 

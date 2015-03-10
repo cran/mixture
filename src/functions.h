@@ -55,4 +55,4 @@ void estep(double *x, int N, int p, int G, double *mu, double **Sigma, double **
 void mstep (double *x, int N, int p, int G, double *z, double *mu, double **sampcov,  double **Sigma, double **invSigma,  double *logdet, double mmtol, int mmax, double *D, char **covtype);
 void modeltype(int pp, double pi[], int GG, double *D, double **sampcov, double **Sigma, double **invSigma, double *logdet,
 double eplison, int maxiter, char **covtype); 
-void main_loop(int *N, int *p, int *G, double *z, int *nmax, double *atol, double *mtol, int *mmax, double *x, int *labels, char **covtype, double *logl, int *counter, int *MAPP);
+void main_loop(int *N, int *p, int *G, double *z, double *sigmar, double *invsigmar, double *mu, double *pi, int *nmax, double *atol, double *mtol, int *mmax, double *x, int *labels, char **covtype, double *logl, int *counter, int *MAPP, double *D);

@@ -5,7 +5,7 @@
 Carries out model-based clustering or classification using some or all of the 14 parsimonious Gaussian clustering models (GPCM).}
 \usage{
 gpcm(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE, 
-nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, pprogress=FALSE, pwarning=TRUE) 
+nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, pprogress=FALSE, pwarning=FALSE) 
 }
 \arguments{
   \item{data}{

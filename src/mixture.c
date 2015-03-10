@@ -12,7 +12,7 @@
 #include "functions.h"
 #define COMMENTS 0 
 
-void main_loop(int *N, int *p, int *G, double *z, int *nmax, double *atol, double *mtol, int *mmax, double *x, int *labels, char **covtype, double *logl, int *counter, int *MAPP){
+void main_loop(int *N, int *p, int *G, double *z, double *sigmar, double *invsigmar, double *mu, double *pi, int *nmax, double *atol, double *mtol, int *mmax, double *x, int *labels, char **covtype, double *logl, int *counter, int *MAPP, double *D){
     int g, i, n;
     int NN = *N;
     int pp = *p;
@@ -21,9 +21,7 @@ void main_loop(int *N, int *p, int *G, double *z, int *nmax, double *atol, doubl
     double aatol= *atol;
     double mmtol = *mtol;
     int mmmax = *mmax;
-    mmax = 1;
-    double *D = malloc(sizeof(double)*pp*pp);
-    double *mu          = malloc(sizeof(double)*GG*pp);
+//    double *D = malloc(sizeof(double)*pp*pp);
     double *z1          = malloc(sizeof(double)*NN*GG);
     double **Sigma      = malloc(sizeof(double*)*GG);
     double **invSigma   = malloc(sizeof(double*)*GG);
@@ -58,7 +56,7 @@ void main_loop(int *N, int *p, int *G, double *z, int *nmax, double *atol, doubl
     mstep(x, NN, pp, GG, z, mu, sampcov, Sigma, invSigma, logdet, mmtol, mmmax, D, covtype);
     logl[2] = loglik (x, mu, z, NN, pp, GG, invSigma, logdet);
     i = 2;
-    while(getall(logl, i) > aatol && i<nnmax) {
+    while(getall(logl, i) > aatol && i<(nnmax-1)) {
        i = i + 1;
        estep(x, NN, pp, GG, mu, Sigma, invSigma, logdet, labels, z);
        mstep(x, NN, pp, GG, z, mu, sampcov, Sigma, invSigma, logdet, mmtol, mmmax, D, covtype);
@@ -75,13 +73,19 @@ void main_loop(int *N, int *p, int *G, double *z, int *nmax, double *atol, doubl
         }
     }
 
-
     MAP(z1, NN, GG, labels, x, pp, mu, Sigma, invSigma, logdet, MAPP);
+    for(g=0; g<GG; g++){
+       for(i=0; i<pp*pp; i++){
+           sigmar[g*pp*pp +i] = Sigma[g][i];
+           invsigmar[g*pp*pp +i] = invSigma[g][i];
+        }
+     }
 
+    get_mu (pp, GG, NN, x, z, mu);
+    get_pi( NN, GG, z, pi);
     free(logdet);
     free(z1);
-    free(mu);
-    free(D);
+//    free(D);
     for(g=0; g<GG; g++) {
        free(sampcov[g]);
        free(Sigma[g]);
@@ -111,6 +115,7 @@ double getall(double logl[], int i) {
     double lm1  =  logl[i];
     double lm   =  logl[i-1];
     double lm_1  = logl[i-2];
+// valgrind line # 114    
     double am  = (lm1 - lm)/(lm - lm_1);
     double lm1_Inf = lm + (lm1 - lm)/((double)1.0-am);
     val = lm1_Inf - lm ;
@@ -331,6 +336,8 @@ void msEEE (int p, double pi[], int G, double **sampcov, double **Sigma, double 
          logdet[g] = logdetW;
     free(W);
     free(invW);
+    for(g=0; g<G; g++)
+       free(val[g]);
     free(val);
 
 
@@ -409,15 +416,20 @@ void msEEV (int p, double pi[], int G, double **sampcov, double **Sigma, double 
         logdet[g] = (double)p*log(lam); 
     free(wr);
     free(vr);
+    free(A);
+    free(B);
     free(dummy1);
     free(dummy2);
     free(dummy3);
     free(dummy4);
+    for(g=0; g<G; g++){
+       free(WK[g]);
+       free(WK1[g]);
+       free(EWK[g]);
+    }
     free(WK);
     free(WK1);
     free(EWK);
-    free(A);
-    free(B);
 
 }
 
@@ -491,13 +503,18 @@ void getOk(double **sampcov, double **Ok, double pi[], int G, int p) {
         for(i=0; i< p; i++)
             Ok[g][i*p +i] = Ok1[g][i*p + i];
     free(wr);
+    free(dummy1);
+    free(dummy2);
+    for(g=0; g<G; g++){ 
+       free(Wk[g]);
+       free(Wk1[g]);
+       free(Ok1[g]);
+       free(EWk);
+    }   
     free(Wk);
     free(Wk1);
     free(Ok1);
-    free(Wk);
     free(EWk);
-    free(dummy1);
-    free(dummy2);
 } 
 
 void getEkOk(double **sampcov, double **Ok, double **EWk, double pi[], int G, int p) {
@@ -538,11 +555,17 @@ void getEkOk(double **sampcov, double **Ok, double **EWk, double pi[], int G, in
             Ok[g][i] = dummy2[i];
         }
     }
+    free(wr);
+    free(dummy1);
+    free(dummy2);
+    for(g=0; g<G; g++){
+       free(Wk[g]);
+       free(Wk1[g]);
+       free(EWkt[g]);
+   } 
     free(Wk);
     free(Wk1);
     free(EWkt);
-    free(dummy1);
-    free(dummy2);
 }
 void msVEV(int p, double pi[], int G, double **sampcov, double **Sigma, double **invSigma, double *logdet, double 
 eplison, int maxiter) {
@@ -636,15 +659,19 @@ eplison, int maxiter) {
    free(lam);
    free(lam1);
    free(invA);
-   free(EWk);
    free(A);
-   free(Ok);
    free(B);
    free(z);
    free(dummy1);
    free(dummy2);
    free(dummy3);
    free(dummy4);
+   for(g=0; g<G; g++){
+       free(Ok[g]);
+       free(EWk[g]);
+       }
+   free(Ok);
+   free(EWk);
 }
 
 
@@ -788,11 +815,6 @@ void msEVE (int p, double pi[], int G, double **sampcov, double **Sigma, double 
          
         for(i=0; i<p*p; i++)
             D[i] = D6[i];  
-    for(g=0; g<G; g++){
-        free(Wk[g]);
-        free(C[g]);
-        free(B[g]);
-    }
     free(W);
     free(D6);
     free(prod);
@@ -802,6 +824,11 @@ void msEVE (int p, double pi[], int G, double **sampcov, double **Sigma, double 
     free(dummy2);
     free(dummy3);
     free(dummy4);
+    for(g=0; g<G; g++){
+       free(Wk[g]);
+       free(B[g]);
+       free(C[g]);
+    }
     free(Wk);
     free(B);
     free(C);
@@ -830,10 +857,10 @@ void msVVE (int p, double pi[], int G, double **sampcov, double **Sigma, double 
     double **B    = malloc(sizeof(double*)*G);
     double **C    = malloc(sizeof(double*)*G);
 
-    for(i=0; i<p*p; i++)
-        D[i] = 0.0;
-    for(i=0; i<p; i++)
-         D[i*p + i] = (double)1.0;
+//    for(i=0; i<p*p; i++)
+//        D[i] = 0.0;
+//    for(i=0; i<p; i++)
+//         D[i*p + i] = (double)1.0;
 
     for(g=0; g<G; g++) {
         Wk[g] = malloc(sizeof(double)*p*p);
@@ -951,20 +978,21 @@ void msVVE (int p, double pi[], int G, double **sampcov, double **Sigma, double 
         logdet[g] = (double)p*log((lam[g]));
         for(i=0; i<p*p; i++)
             D[i] = D6[i];  
-    for(g=0; g<G; g++){
-        free(Wk[g]);
-        free(C[g]);
-        free(B[g]);
-    }
     free(W);
     free(D6);
     free(prod);
+    free(lam);
     free(sum);
     free(Ak);
     free(dummy1);
     free(dummy2);
     free(dummy3);
     free(dummy4);
+    for(g=0; g<G; g++){
+       free(Wk[g]);
+       free(B[g]);
+       free(C[g]);
+    }
     free(Wk);
     free(B);
     free(C);
@@ -1117,6 +1145,7 @@ for(i=0;i<p;i++){
     free(s1);
     free(u);
     free(u1);
+    free(ut);
     free(xk);
     free(vtt);
     free(vtt1);
@@ -1125,7 +1154,6 @@ for(i=0;i<p;i++){
     free(dummy1);
     free(dummy2);
     free(B);
-    free(ut);
     free(vttt);
 }
 double  testval(double *D6, int p, int G, double **Wk, double *Ak) {
@@ -1369,6 +1397,18 @@ void msVEE (int p, double pi[], int G, double **sampcov, double **Sigma, double 
 
     for(g=0; g<G; g++)  
         logdet[g] = (double)p*log(lam[g]);
+    free(W);
+    free(inv);
+    free(z);
+    free(lam);
+    free(wt);
+    free(val);
+    free(C);
+    free(dummy1);
+    free(invC);
+    for(g=0; g<G; g++)
+       free(Wk[g]);
+    free(Wk);
 }
 
 
@@ -1424,7 +1464,7 @@ void msVEI (int p, double pi[], int G, double **sampcov, double **Sigma, double 
         sum +=lam1[g];
     }
     conv[0] = sum* (double)p;
-    conv[1] = 1000.0;
+    conv[1] = 100000.0;
     count = 1;
     while(fabs(conv[1]-conv[0]) > eplison && count < maxiter) {
     for(g=0; g<G; g++) 
@@ -1538,6 +1578,11 @@ void msEVV (int p, double pi[], int G, double **sampcov, double **Sigma, double 
        for( g=0; g < G; g++)
          logdet[g] = (double)p*log(sum);
     free(lam);
+    for(g=0; g<G; g++){
+       free(WK[g]);
+       free(CK[g]);
+       free(inv[g]);
+    }
     free(WK);
     free(CK);
     free(inv);
@@ -1795,9 +1840,9 @@ void svd(int M, int N, double *A, double *s, double *u, double *vtt) {
         work = (double*)malloc( lwork*sizeof(double) );
         dgesdd_( "Singular vectors", &m, &n, A, &lda, s, u, &ldu, vt, &ldvt, work,
         &lwork, iwork, &info );
-        if( info > 0 ) {
-                Rprintf( "The algorithm computing SVD failed to converge.\n" );
-          }
+//        if( info > 0 ) {
+//                Rprintf( "The algorithm computing SVD failed to converge.\n" );
+//          }
       for(i=0;i<N;i++) 
           for(j=0;j<N;j++)
               vtt[i+N*j] = vt[i*N+j];
@@ -1835,10 +1880,10 @@ void svd1(int M, int N, double *A, double *s, double *u, double *vtt) {
         work = (double*)malloc( lwork*sizeof(double) );
         dgesvd_( "All", "All", &m, &n, A, &lda, s, u, &ldu, vt, &ldvt, work, &lwork,
          &info );
-        if( info > 0 ) {
-                Rprintf( "The algorithm computing SVD failed to converge.\n" );
+//        if( info > 0 ) {
+//                Rprintf( "The algorithm computing SVD failed to converge.\n" );
 //                exit( 1 );
-         }
+//         }
       for(i=0;i<M;i++) 
           for(j=0;j<N;j++)
               vtt[i*N+j] = vt[i+j*M];
@@ -1874,10 +1919,10 @@ void eigen(int N, double *A, double *wr, double *vr) {
      dgeev_( "Vectors", "Vectors", &N, A, &lda, wr, wi, vl, &ldvl, vr, &ldvr,
      work, &lwork, &info );
       /* Check for convergence */
-        if( info > 0 ) {
-                Rprintf( "The algorithm failed to compute eigenvalues.\n" );
+//        if( info > 0 ) {
+//                Rprintf( "The algorithm failed to compute eigenvalues.\n" );
 //                exit( 1 );
-       }
+//       }
 //        print_eigenvalues( "Eigenvalues", N, wr, wi );
 //        print_eigenvectors( "Left eigenvectors", N, wi, vl, ldvl );
 //        print_eigenvectors( "Right eigenvectors", N, wi, vr, ldvr );
