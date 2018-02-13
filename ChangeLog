@@ -1,3 +1,6 @@
+mixture version 1.5 2014-12-23:
+- allowed installation with statically-linked libraries. 
+
 mixture version 1.2 2014-12-23:
 - The EM function has been rewritten such that it includes interface to C code
 - The C code consists of some R functions that have been translated into C 

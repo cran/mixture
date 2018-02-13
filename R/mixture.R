@@ -58,8 +58,25 @@ model.type <- function(modelname=NULL, Sk=NULL, ng=NULL, D=NULL, mtol=1e-10, mma
 }
 
 
-gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE, nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, pprogress=FALSE, pwarning=FALSE) {
-        set.seed(102)
+
+getall <- function(loglik) {
+	if (length(loglik) >= 3) { #stop("must have at least 3 likelihood values")
+	n = length(loglik)
+	lm1 = loglik[n]
+	lm  = loglik[(n-1)]
+	lm_1  = loglik[(n-2)]
+	am = (lm1 - lm)/(lm - lm_1)
+	lm1.Inf = lm + (lm1 - lm)/(1-am)
+	val = lm1.Inf - lm	
+	if (!is.na(val) ) val= abs(val)	
+	else val = 0
+
+	} else val = NA		
+	return( val )
+	}
+
+gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE, nmax=1000, atol=1e-8,  mtol=1e-8, mmax=10, pprogress=FALSE, pwarning=FALSE) {
+      
 	if (is.null(data)) stop('Hey, we need some data, please! data is null')
 	if (!is.matrix(data)) stop('The data needs to be in matrix form')
 	if (!is.numeric(data)) stop('The data is required to be numeric')
@@ -72,27 +89,30 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE,
 	if ( any(G < 1)) stop('G is not a positive integer')
 	
 	if (is.null(mnames) )  mnames = c("EII", "VII", "EEI", "VEI", "EVI", "VVI", "EEE", "EEV", "VEV", "VVV", "EVE", "VVE", "VEE", "EVV")
-#	if (is.null(mnames) )  mnames = c("EVE", "VVE", "VEE", "EVV")
+
+
 
 	bic = array(0, dim= c(length(G), length(mnames), 3), dimnames=list(G, mnames, c('loglik', "npar", "BIC")) )
-	#BIC = matrix(0, nrow=length(G), ncol=length(mnmaes), dimnames=list(G, mnames) )	
+	
 	model = NULL; curBIC = Inf;
 	for (g in 1:length(G)) {
 	for (i in 1:length(mnames)) {
 		if ( pprogress ) print(c(G[g],mnames[i]))
 		if (veo | npar.model(modelname=mnames[i], p=ncol(data), G=G[g]) < nrow(data)) {
+  
+         
+        a =	EM(data=data, G=G[g], nmax=nmax, covtype=mnames[i], start=start, label=label, atol= atol, mtol=mtol, mmax=mmax ) 
         
- #  print("gpcm EM1")
-        a =	try( { EM(data=data, G=G[g], nmax=nmax, covtype=mnames[i], start=start, label=label, atol= atol, mtol=mtol, mmax=mmax ) }, silent= !pwarning)
- #  print("gpcm EM2")
-#        a =	EM(data=data, G=G[g], nmax=nmax, covtype=mnames[i], start=start, label=label, atol= atol, mtol=mtol, mmax=mmax ) 
 		if(length(a) > 1){
 			bic[g,i,1:2] = c(a$loglikn, npar.model(modelname=mnames[i], p=ncol(data), G=G[g]) )
 			bic[g,i,3] =  -2*bic[g,i,1] + bic[g,i,2]*log(nrow(data)) 
+			
+			
 #			cat(bic[g,i,1],bic[g,i,3], curBIC, "\n")
 			if (is.nan(bic[g,i,3]) | is.infinite(bic[g,i,3]) ){
 				bic[g,i,1:2] = c(NA, npar.model(modelname=mnames[i], p=ncol(data), G=G[g]) )
 				bic[g,i,3] =  NA
+				
 			}
 			else if ( bic[g,i,3] < curBIC) {
 					model  = append(a,list(mtype=mnames[i]))
@@ -123,6 +143,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, start=0, label=NULL, veo=FALSE,
     class(val)<-"gpcm"
 	return(val)
 }
+
 
 
 print.gpcm <-function(x, ...){
@@ -221,6 +242,7 @@ igpark <- function(data=NULL, g=NULL, covtype=NULL) {
 	if (g==1) w = matrix(0,nrow=nrow(data),ncol=1)
 	else {
 	lw = kmeans(x=data, centers=g, iter.max= 25 )$cluster
+
 	w  = combinewk(matrix(0,nrow=nrow(data),ncol=g), label=lw)
 	}
 	return(w)
@@ -234,9 +256,11 @@ run_em <- function(x=NULL, G=NULL, z=NULL, nmax=NULL, atol=NULL, mtol=NULL, mmax
 	if (!is.matrix(data)) as.matrix(x)
     N = nrow(x)
     p = ncol(x)
-    if (is.null(label) ) label = rep(1,N)	
+    if (is.null(label) ) label = rep(0,N)	
     MAPP = numeric(N)
+    MAPP2 = numeric(N)
     logl = numeric(nmax)
+    maps = numeric(nmax)
     counter = 0
     sigmar    = matrix(0, nrow=G, ncol=p^2 )
     invsigmar = matrix(0, nrow=G, ncol=p^2 )
@@ -248,7 +272,7 @@ run_em <- function(x=NULL, G=NULL, z=NULL, nmax=NULL, atol=NULL, mtol=NULL, mmax
         as.double(sigmar), as.double(invsigmar), as.double(mu), as.double(pi), 
         as.integer(nmax), as.double(atol), as.double(mtol),
         as.integer(mmax), as.double(x), as.integer(label), as.character(covtype), 
-        as.double(logl), as.integer(counter), as.integer(MAPP), as.double(D), PACKAGE="mixture")
+        as.double(logl), as.integer(counter), as.integer(MAPP), as.double(D), as.integer(MAPP2), as.double(maps), PACKAGE="mixture")
 
     z        = matrix(temp_em[[4]], nrow=N, ncol=G)
 	num.iter = temp_em[[17]]
@@ -257,6 +281,9 @@ run_em <- function(x=NULL, G=NULL, z=NULL, nmax=NULL, atol=NULL, mtol=NULL, mmax
     loglik   = temp_em[[16]]
     loglik   = loglik[1:num.iter]
     loglikn  = loglik[num.iter]
+
+    maps  = temp_em[[21]]/N
+	maps = maps[1:num.iter]
 
     sigma    = array(temp_em[[5]], dim= c(p,p,G) ) 
     invsigma = array(temp_em[[6]], dim= c(p,p,G) )
@@ -276,7 +303,7 @@ run_em <- function(x=NULL, G=NULL, z=NULL, nmax=NULL, atol=NULL, mtol=NULL, mmax
 	if (covtype == "EVE") gpar$D  = matrix(DD, nrow=p, ncol=p)
 	if (covtype == "VVE") gpar$D  = matrix(DD, nrow=p, ncol=p)	
 
-    val = list(z=z, loglik=loglik, gpar = gpar, loglikn=loglikn, num.iter = num.iter, map=map, G=G, mtype= covtype)
+    val = list(z=z, loglik=loglik, gpar = gpar, loglikn=loglikn, num.iter = num.iter, map=map, G=G, mtype= covtype, maps=maps)
     return(val)
 }
 
@@ -902,7 +929,7 @@ msVVE <- function(Sk=NULL, ng=NULL, eplison=1e-20, max.iter= 10, D0=NULL) {
 	for (g in 1:G) lam[g] =sum(diag( D %*% diag(1/Ak[,g])%*% t(D) %*% Sk[,,g] ))/d
 #print(apply(Ak,2,prod))
 	
-	val = list(sigma=array(0, c(d,d,G)), invSigma=array(0, c(d,d,G)), logdet=numeric(G)  )
+	val = list(sigma=array(0, c(d,d,G)), invSigma=array(0, c(d,d,G)), logdet=numeric(G),D=D )
 	for (g in 1:G) { 
 		val$sigma[,,g]    = (D %*% diag(lam[g]*Ak[,g])%*% t(D))
 		val$invSigma[,,g] = (D %*% diag(1/lam[g]*1/Ak[,g])%*% t(D))

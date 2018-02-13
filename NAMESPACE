@@ -1,4 +1,4 @@
-useDynLib(mixture,main_loop)
+useDynLib(mixture,main_loop, .registration = TRUE)
 
 export(gpcm)
 export(m.step)
@@ -7,3 +7,7 @@ S3method(print, gpcm)
 
 S3method(plot, gpcm)
 S3method(summary, gpcm)
+
+importFrom("graphics", "legend", "lines", "plot")
+importFrom("stats", "cov.wt", "kmeans", "mahalanobis", "rexp")
+importFrom("utils", "data")
