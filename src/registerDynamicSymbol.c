@@ -3,12 +3,14 @@
 #include <R.h>
 #include <Rmath.h>
 #include <string.h>
+/* Wrong-headed
 #ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
 #else
+*/
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
-#endif
+//#endif
 #include "functions.h"
 #define COMMENTS 0 
 
@@ -2045,6 +2047,7 @@ int ginv(__CLPK_integer n, __CLPK_integer lda, double *A, double *B) {
         __CLPK_integer LDB= n;
         __CLPK_integer IRANK = -1;
         double RCOND = -1.0f;
+	// <FIXME> none of these allocation are checked
         double *WORK = (double *)malloc(sizeof(double));
         double *sing = (double *)malloc(sizeof(double)*n);
         double *C = (double *) malloc(sizeof(double)*n*n);
@@ -2062,8 +2065,8 @@ int ginv(__CLPK_integer n, __CLPK_integer lda, double *A, double *B) {
         if(COMMENTS && info != 0) {
                 Rprintf("Failed in computing pseudo inverse.\n");
         } else {
-                LDWORK = WORK[0];
-          free(WORK);
+                LDWORK = (int)WORK[0];
+          free(WORK); // better to realloc
           WORK = (double *)malloc(sizeof(double)*LDWORK);
           dgelss_(&n, &n, &NRHS, C, &n, B, &LDB, sing, &RCOND, &IRANK, WORK, &LDWORK, &info);
 

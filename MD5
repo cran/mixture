@@ -1,5 +1,5 @@
 dcec08cea180e9e464af76c49530d75c *ChangeLog
-3aea7c6af2816e58f6b4911a5b0e465a *DESCRIPTION
+702d061588f4d296213d90415a010f42 *DESCRIPTION
 3ed00548020a0c1359b9d279d4c6cc88 *NAMESPACE
 33ac9ae1bb05ef543d1e88b12976d8ff *R/mixture.R
 0942588824cc795e330ca99abe7575fa *data/x2.rda
@@ -12,5 +12,5 @@ bcc34c8672ef6293dc27ac82885bb49a *man/gpcm.Rd
 19f697421153daf253b75d22ef674876 *src/Makevars
 1a7f1851788b1ce8afb9854f5aa09ed3 *src/functions.h
 07a182c158025ed5125d63a615a6cd37 *src/mixture.c
-b49333827aa718703a68d1cfc499289b *src/registerDynamicSymbol.c
+aaef5d23fd4378632a84e34b864b21f3 *src/registerDynamicSymbol.c
 dbf6137b8567a1f4529b6a6ed05e899b *src/zeroin.h
