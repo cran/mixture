@@ -1,17 +1,5 @@
-mixture version 1.5 2014-12-23:
-- allowed installation with statically-linked libraries. 
+mixture version 2.0.0 2020-02-09:
 
-mixture version 1.2 2014-12-23:
-- The EM function has been rewritten such that it includes interface to C code
-- The C code consists of some R functions that have been translated into C 
-  language in addition to few other functions written in C. These functions are:
-	- MAP, getall, loglik, weights, get_pi, e.step, m.step, modeltype, msEII,
-	  msEEE, msEEV, getA, get0k, getEk0k, msVEV, msEVE, msVVE, newD3MM, newD4MM,
-          testval, newD, maxi, max_loc, msVEE, msVEI, msVVV, msEVV, msEEI, msVII,
-	  msEVI, msVVI, sumSkwt, mahalanobis, determinant, svd1, eigen, dgeev_sort,
-          ginv, Covariance, get_mu, get_ng, combinewk
-
-mixture version 1.1 2014-07-11:
-- Function e.step exported and associated manual added
-- Function m.step exported and associated manual added
-- Minor edits and updates in inst/CITATION
+- Cpp used.
+- Missing data implemented. 
+- Four mean-variance mixtures.

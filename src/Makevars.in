@@ -1,0 +1,15 @@
+
+GSL_CFLAGS = @GSL_CFLAGS@
+GSL_LIBS   = @GSL_LIBS@
+
+PKG_LIBS = @OPENMP_CXXFLAGS@ $(GSL_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) 
+
+# 1.2.4 Using C++11 code
+CXX_STD = CXX11
+
+# This is necesary since ARMADILLO now supports OpenMP
+PKG_CXXFLAGS=@OPENMP_CXXFLAGS@ -DARMA_64BIT_WORD $(GSL_CFLAGS) -I.
+
+
+# For testing
+#PKG_CXXFLAGS=-Wall
