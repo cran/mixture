@@ -70,6 +70,7 @@ else
    AC_MSG_ERROR([gsl-config not found, is GSL installed?])
 fi
 
+
 AC_MSG_CHECKING([if GSL version >= 2.1])
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <string.h>
@@ -79,7 +80,7 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 int main() {
 #ifdef GSL_VERSION
    int major, minor;
-   char *gslv = GSL_VERSION;
+   const char *gslv = GSL_VERSION;
    if ((sscanf(gslv, "%d.%d", &major, &minor)) != 2) {
      exit (1);
    }

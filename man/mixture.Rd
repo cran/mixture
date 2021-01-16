@@ -3,14 +3,14 @@
 \docType{package}
 \title{Mixture Models for Clustering and Classification}
 \description{
-An implementation of 14 parsimonious clustering models for Gaussian, Generalized Hyperbolic, Variance Gamma, and Skew-t, for model-based clustering and model-based classification, even with missing data. 
+An implementation of 14 parsimonious clustering models for model-based clustering and model-based classification, even with missing data. Four different mixture distributions are avaialble, i.e., component densities may be Gaussian, generalized hyperbolic, variance-gamma, or skew-t. 
 }
 \details{
 \tabular{ll}{
 Package: \tab mixture \cr
 Type: \tab Package\cr
-Version: \tab 2.0.0\cr
-Date: \tab 2021-01-11\cr
+Version: \tab 2.0.1\cr
+Date: \tab 2021-01-15\cr
 License: \tab GPL (>=2)\cr
 }
 This package contains the functions \code{gpcm}, \code{ghpcm}, \code{vgpcm}, \code{stpcm}, \code{e_step}, \code{ARI}, and \code{get_best_model}, plus three simulated data sets.

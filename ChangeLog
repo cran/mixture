@@ -1,5 +1,10 @@
-mixture version 2.0.0 2020-02-09:
+
+mixture version 2.0.1 2021-01-15:
+
+- Fixes for solaris.
+
+mixture version 2.0.0 2021-01-11:
 
 - Cpp used.
 - Missing data implemented. 
-- Four mean-variance mixtures.
+- Mixtures with skewed components (via variance-mean mixtures) added.

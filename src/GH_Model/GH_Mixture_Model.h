@@ -214,7 +214,7 @@ double GH_Mixture_Model::LG_k_bessel(double nu, double x){
 
       try{ 
 
-          approx_result = 0.5*(log(M_PI) - log(2) - log(nu) ) - nu*log(M_E*x) + nu*log(2*nu); 
+          approx_result = 0.5*(log(M_PI) - log(2.0) - log(nu) ) - nu*log(M_E*x) + nu*log(2*nu); 
         
           if(isnan(approx_result)){
             // overflow has occured. 

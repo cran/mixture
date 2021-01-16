@@ -209,7 +209,7 @@ double ST_Mixture_Model::LG_k_bessel(double nu, double x){
 
       try{ 
 
-          approx_result = 0.5*(log(M_PI) - log(2) - log(nu) ) - nu*log(M_E*x) + nu*log(2*nu); 
+          approx_result = 0.5*(log(M_PI) - log(2.0) - log(nu) ) - nu*log(M_E*x) + nu*log(2*nu); 
         
           if(isnan(approx_result)){
             // overflow has occured. 
@@ -496,12 +496,12 @@ double ST_Mixture_Model::log_density(arma::vec x, // vector comes in as 1 x p
   if( comparison_st(delta,0) ){
     delta = 0.0001;
   }
-  // logdens=mybessel(abs(tau),sqrt((delta+nu)*rho))+log(2)+0.5*nu*log(nu/2)+
+  // logdens=mybessel(abs(tau),sqrt((delta+nu)*rho))+log(2.0)+0.5*nu*log(nu/2)+
   // tr(Sigma*(X-M)*A')-(p/2)*log(2*pi)+(1/2)*detSig-log(gamma(nu/2))+(tau/2)*(log(delta+nu)-log(rho))
 
 
   double bess_input = sqrt( (delta + v_g)*(rho));
-  double leading_terms = - (p/2.0)*log(2.0*M_PI) - 0.5*log_det + 0.5*v_g*log(v_g) - (v_g/2 - 1)*log(2) - boost::math::lgamma(v_g/2);  //
+  double leading_terms = - (p/2.0)*log(2.0*M_PI) - 0.5*log_det + 0.5*v_g*log(v_g) - (v_g/2 - 1)*log(2.0) - boost::math::lgamma(v_g/2);  //
   double middle_terms = arma::trace(inv_Sig*(x-mu)*alpha.t());
   double third_term = (nu/2.0)*( log(delta + v_g) - log(rho));
   double bessel_term = LG_k_bessel(abs(nu),bess_input);
