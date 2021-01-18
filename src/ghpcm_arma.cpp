@@ -104,7 +104,7 @@ Rcpp::List main_loop_gh(arma::mat X, // data
   // create mixture model class. 
   std::unique_ptr<GH_Mixture_Model> m = std::unique_ptr<GH_Mixture_Model>(gh_create_model(&X,G,model_id,model_type));  
   
-  if(isnan(in_l_tol)){
+  if(std::isnan(in_l_tol)){
     m->tol_l = 1e-6;
   }
   else{

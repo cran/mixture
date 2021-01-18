@@ -1,5 +1,5 @@
-75df2ef9056c8809866f58d3494093e5 *ChangeLog
-002bd8ccd37f31d3d81da74f115a1485 *DESCRIPTION
+d63cffd8f06ef6cc4e19275289001af6 *ChangeLog
+54bfe7883046639313d0acaaa2d4ab6e *DESCRIPTION
 ff9fdd551c5e5717eb36daba079b8b07 *NAMESPACE
 cfca77dbba0ccb0a51e8018794d8a489 *R/RcppExports.R
 37f469fd704c43aa810f93514cda680f *R/gh_mixture.R
@@ -7,8 +7,8 @@ db9cd49a0c908676f051fd8cda8ab25f *R/mixture.R
 7dd9596862275214ca06e21d6f96fd27 *R/st_mixture.R
 006d8ab61ffc064372dad8f34e960a0c *R/vg_mixture.R
 2ac532068c08bd745abd9252277243c3 *cleanup
-93fa956e7e86368e851d60092ce756c0 *configure
-da7bd48ee105ea7aaf5a308e7697a1bf *configure.ac
+f8bfa70cc79ce3755b1baa295ca5f7b5 *configure
+3c43d2f158a2869b0116b477aa70d87b *configure.ac
 772fab3150ea01966d067a77ee82add9 *data/sx2.rda
 9d64b8fe9a37af1aede3e0eb7314280a *data/sx3.rda
 0942588824cc795e330ca99abe7575fa *data/x2.rda
@@ -22,7 +22,7 @@ ff93ffd35dfeac209b6d7e8383344fce *man/main_loop.Rd
 5e375b0e98596458137c68b47da467b4 *man/main_loop_gh.Rd
 3aad81b1726b424b5fca351295987bc2 *man/main_loop_st.Rd
 ced8a201738d75276f0715846c3ae430 *man/main_loop_vg.Rd
-713c4fa69206522238d06fb621619fb8 *man/mixture.Rd
+9f6f9cc823baa92d1b50c52e0f8c92e3 *man/mixture.Rd
 7babcd700c840a6fe91d16e72aca86f4 *man/stpcm.Rd
 9bbee03e608d80ab82b3b340c161240e *man/sx2.Rd
 98e5449f657b67440c81bf5b531c3521 *man/sx3.Rd
@@ -39,7 +39,7 @@ b93d536b9dd22aced139e586a2a2af68 *man/z_ig_random_hard.Rd
 abfe6e268c24200ac86b4a7b0032270e *src/GH_Model/GH_EVE.hpp
 b6295ca471a78caaeaea278fb2f5a6c5 *src/GH_Model/GH_EVI.hpp
 253c269bfc88a86cc06c5d20a24697b1 *src/GH_Model/GH_EVV.hpp
-54693227f7398743592a14d1f5e8ea70 *src/GH_Model/GH_Mixture_Model.h
+0f00a30b8f533c452e2bbbee7b53cf0a *src/GH_Model/GH_Mixture_Model.h
 ae3d9ee9d0ea4707159a579babcbf713 *src/GH_Model/GH_VEE.hpp
 fc4df12f4eb851f6cd42f2281b8a3027 *src/GH_Model/GH_VEI.hpp
 9b055d72ec1ad6e2162fb9c1f00a384e *src/GH_Model/GH_VEV.hpp
@@ -58,7 +58,7 @@ f9e28b602710451c6ef209dce4285588 *src/ST_Model/ST_EII.hpp
 22ddf3c89a9c78073e155d4459b7b702 *src/ST_Model/ST_EVI.hpp
 a910acb9cbef336a9951ab5460175709 *src/ST_Model/ST_EVV.hpp
 b983e674b9f0f91d99f5a39057f155d6 *src/ST_Model/ST_Gamma_Solve.hpp
-9b8cb7aa63a36da9876c2126a72dfc98 *src/ST_Model/ST_Mixture_Model.h
+39db486c9d171f914d0c7fd1c256c733 *src/ST_Model/ST_Mixture_Model.h
 dde6a90b21063426f01a3d3e97226752 *src/ST_Model/ST_VEE.hpp
 fdeacac57c5f00a737b6ab8aca6d33ef *src/ST_Model/ST_VEI.hpp
 361a9fec877e0f1053d6c196cbbf605a *src/ST_Model/ST_VEV.hpp
@@ -74,7 +74,7 @@ c6d7de8ec5b3a70465198e237acb5ead *src/ST_Model/ST_VVV.hpp
 a09531263cb54e634c1a3fbe23dd30da *src/VG_Model/VG_EVI.hpp
 e3d67949b6d7d96e0183e94ff4078e8d *src/VG_Model/VG_EVV.hpp
 52a54fb0afd4117b43a5d00223c19f75 *src/VG_Model/VG_Gamma_Solve.hpp
-a95491d478b6810afe764f775454e4c5 *src/VG_Model/VG_Mixture_Model.h
+28eec664e336295362ce89353261d4e7 *src/VG_Model/VG_Mixture_Model.h
 3a941f98640b3c53ebc666f7c94a5e55 *src/VG_Model/VG_VEE.hpp
 661ee89eb74a5fb8e305f2d01a575f35 *src/VG_Model/VG_VEI.hpp
 216b1b8dcb65a0c560f94317e4c4a563 *src/VG_Model/VG_VEV.hpp
@@ -82,7 +82,7 @@ a95491d478b6810afe764f775454e4c5 *src/VG_Model/VG_Mixture_Model.h
 1b608fed03f7215110bcfb437d989058 *src/VG_Model/VG_VVE.hpp
 06c38fbc3c6a0dac380e75f1f1dcf9d0 *src/VG_Model/VG_VVI.hpp
 91b1aaeb9db6b18a1341ac95278a864c *src/VG_Model/VG_VVV.hpp
-56e190b1c7bcc02bbe8f829a785029f8 *src/ghpcm_arma.cpp
-4a3adb6f493c62ab9aaccd588ceb8229 *src/gpcm_arma.cpp
-1c3b3c259b503d556f726990bc5d96c9 *src/stpcm_arma.cpp
-d06bc53cc4d2e3e1b800191855fb65d0 *src/vgpcm_arma.cpp
+18dff45a2a78646d5e99923d7189cb25 *src/ghpcm_arma.cpp
+d2c9f6eb1a07fd14d885bf5febd11acc *src/gpcm_arma.cpp
+44c6536460b3b606ee4cd3b813e4444d *src/stpcm_arma.cpp
+0dc343af10211f536b59c47b8fbe18fd *src/vgpcm_arma.cpp

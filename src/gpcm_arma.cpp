@@ -616,7 +616,7 @@ void Mixture_Model::E_step()
 
     double ss = arma::sum(inter_zigs.row(i));
     
-    if(isnan(ss)){
+    if(std::isnan(ss)){
       inter_zigs.row(i) = zi_gs.row(i);
       ss = arma::sum(inter_zigs.row(i));
     }

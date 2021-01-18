@@ -104,7 +104,7 @@ Rcpp::List main_loop_vg(arma::mat X, // data
   // create mixture model class. 
   std::unique_ptr<VG_Mixture_Model> m = std::unique_ptr<VG_Mixture_Model>(vg_create_model(&X,G,model_id,model_type));  
 
-  if(isnan(in_l_tol)){
+  if(std::isnan(in_l_tol)){
     m->tol_l = 1e-6;
   }
   else{

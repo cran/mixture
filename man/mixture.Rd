@@ -9,8 +9,8 @@ An implementation of 14 parsimonious clustering models for model-based clusterin
 \tabular{ll}{
 Package: \tab mixture \cr
 Type: \tab Package\cr
-Version: \tab 2.0.1\cr
-Date: \tab 2021-01-15\cr
+Version: \tab 2.0.2\cr
+Date: \tab 2021-01-17\cr
 License: \tab GPL (>=2)\cr
 }
 This package contains the functions \code{gpcm}, \code{ghpcm}, \code{vgpcm}, \code{stpcm}, \code{e_step}, \code{ARI}, and \code{get_best_model}, plus three simulated data sets.

@@ -106,7 +106,7 @@ Rcpp::List main_loop_st(arma::mat X, // data
   std::unique_ptr<ST_Mixture_Model> m = std::unique_ptr<ST_Mixture_Model>(st_create_model(&X,G,model_id,model_type));  
 
 
-  if(isnan(in_l_tol)){
+  if(std::isnan(in_l_tol)){
     m->tol_l = 1e-6;
   }
   else{

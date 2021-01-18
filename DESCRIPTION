@@ -1,8 +1,8 @@
 Package: mixture
 Type: Package
 Title: Mixture Models for Clustering and Classification
-Version: 2.0.1
-Date: 2021-01-15
+Version: 2.0.2
+Date: 2021-01-17
 Authors@R: c(person("Nik", "Pocuca", role=c("aut")), person("Ryan P.", "Browne", role = c("aut")), person("Paul D.", "McNicholas", role = c("aut", "cre"), email = "mcnicholas@math.mcmaster.ca"))
 Author: Nik Pocuca [aut],
   Ryan P. Browne [aut],
@@ -17,5 +17,5 @@ Imports: Rcpp (>= 1.0.2)
 LinkingTo: Rcpp, RcppArmadillo, BH, RcppGSL
 Depends: R (>= 3.5.0), lattice (>= 0.20)
 SystemRequirements: GNU GSL
-Packaged: 2021-01-15 19:35:49 UTC; paul
-Date/Publication: 2021-01-16 02:10:09 UTC
+Packaged: 2021-01-17 22:07:37 UTC; paul
+Date/Publication: 2021-01-18 16:50:09 UTC

@@ -190,7 +190,7 @@ double GH_Mixture_Model::LG_k_bessel(double nu, double x){
   
   status = gsl_sf_bessel_lnKnu_e(nu,abs(x), &result );
     
-    if(isnan(result.val)){
+    if(std::isnan(result.val)){
       status = 1; 
     }
 
@@ -202,7 +202,7 @@ double GH_Mixture_Model::LG_k_bessel(double nu, double x){
     // try scaled version 
     status = gsl_sf_bessel_Knu_scaled_e(nu, abs(x), & result); 
     
-    if(isnan(result.val)){
+    if(std::isnan(result.val)){
       status = 1; 
     }
 
@@ -216,7 +216,7 @@ double GH_Mixture_Model::LG_k_bessel(double nu, double x){
 
           approx_result = 0.5*(log(M_PI) - log(2.0) - log(nu) ) - nu*log(M_E*x) + nu*log(2*nu); 
         
-          if(isnan(approx_result)){
+          if(std::isnan(approx_result)){
             // overflow has occured. 
             return (log(1e-100));
           }
@@ -338,7 +338,7 @@ bool GH_Mixture_Model::check_aitkens(void) {
         int last_index = logliks.size();
         double l_p1 =  logliks[last_index-1];
         double l_t =  logliks[last_index-2];
-        if( isnan(l_p1) || isinf(l_p1) ){
+        if( std::isnan(l_p1) || std::isinf(l_p1) ){
           infinite_loglik_except e; 
           throw e; 
         }
@@ -375,7 +375,7 @@ bool GH_Mixture_Model::track_lg(bool check)
 
     double c_loglik = calculate_log_liklihood();
 
-    if( isnan(c_loglik) || isinf(c_loglik) ){
+    if( std::isnan(c_loglik) || std::isinf(c_loglik) ){
         
         if(logliks.size() < 10){
           infinite_loglik_except e;
@@ -411,7 +411,7 @@ bool GH_Mixture_Model::track_lg(bool check)
 
             c_loglik = calculate_log_liklihood();
 
-            if(isnan(c_loglik) || isinf(c_loglik)){
+            if(std::isnan(c_loglik) || std::isinf(c_loglik)){
               infinite_loglik_except e; 
               throw e;
               zi_gs = prev_zi_gs; 
@@ -503,7 +503,7 @@ double GH_Mixture_Model::log_density(arma::vec x, // vector comes in as 1 x p
   double third_term = (nu/2.0)*( log(delta + omega_g) - log( rho + omega_g));
   double bessel_term = LG_k_bessel(abs(nu),bess_input);
 
-  if( isnan(bessel_term)){
+  if( std::isnan(bessel_term)){
     bessel_term = log(1e-10);
   }
 
@@ -652,7 +652,7 @@ void GH_Mixture_Model::E_step()
 
     double ss = arma::sum(inter_zigs.row(i));
     
-    if(isnan(ss)){
+    if(std::isnan(ss)){
       inter_zigs.row(i) = zi_gs.row(i);
       ss = arma::sum(inter_zigs.row(i));
     }
@@ -886,9 +886,9 @@ void GH_Mixture_Model::M_step_gamma(void) {
     lambda_new = cbar_gs[g]*lambdas[g]/bess_prime; 
     omega_new = omegas[g] - q_deriv(g)/q_deriv_2(g); 
     //if(lambda_new < 0){ lambda_new = abs(lambda_new);}
-    if(isnan(lambda_new) || isinf(lambda_new)){}
+    if(std::isnan(lambda_new) || std::isinf(lambda_new)){}
     else{ lambdas[g] = lambda_new;}
-    if(isnan(omega_new) || isinf(omega_new)){}
+    if(std::isnan(omega_new) || std::isinf(omega_new)){}
     else{omegas[g] = omega_new; }
   }
 
