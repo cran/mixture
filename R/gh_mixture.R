@@ -4,7 +4,7 @@ ghpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 				start=2, label=NULL, # starting inputs , start = 0: random soft, start = 2, random hard. start = 3 mkmeans. 
 				veo=FALSE, da=c(1.0), # veo (variables exceed observations), da is deterministic annealing  
 				nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5, # convergence settings for matrix and loglik
-				pprogress=FALSE, pwarning=FALSE)  # progress settings 
+				pprogress=FALSE, pwarning=FALSE, stochastic = FALSE)  # progress settings 
 {
 
 	# Do some sanity checks. 
@@ -164,7 +164,7 @@ ghpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 			  # RUN MODEL 
 			  model_results_i <- main_loop_gh(X = t(data),
 			                                  G = G_i, in_zigs = in_zigs, model_id = model_id,
-			                                  model_type = model_id, in_nmax = nmax, in_l_tol = atol,
+			                                  model_type = model_id + stochastic*20, in_nmax = nmax, in_l_tol = atol,
 			                                  in_m_iter_max = mmax, in_m_tol = mtol, anneals = da,
 			                                  t_burn = burn)
 			  status <- "Failed Aitken's Convergence Criterion"

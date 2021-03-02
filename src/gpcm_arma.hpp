@@ -1,43 +1,11 @@
-// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; indent-tabs-mode: nil; -*-
-#define ARMA_USE_LAPACK
-#define ARMA_USE_BLAS
-#define ARMA_HAVE_STD_ISFINITE
-#define ARMA_HAVE_STD_ISINF
-#define ARMA_HAVE_STD_ISNAN
-#define ARMA_HAVE_STD_SNPRINTF
-#define ARMA_DONT_PRINT_ERRORS
-
-
-
-
-// we only include RcppArmadillo.h which pulls Rcpp.h in for us
-#include "RcppArmadillo.h"
-#include <Rcpp.h> 
-
-// via the depends attribute we tell Rcpp to create hooks for
-// RcppArmadillo so that the build process will know what to do
-//
-// [[Rcpp::depends(RcppArmadillo)]]
-
-
-// turn off above and turn on below when compiling the R package version
-#include <armadillo>
-// turn off above and turn on below when compiling the R package version
-//#include "RcppArmadillo.h"
-#include <iostream>
-#include <vector>
-#include "math.h"
-#include <limits>
-#include <stdlib.h>
-#include <exception> 
-#include <memory> 
-#include "Cluster_Error.hpp"
-
+#pragma once
 const double eps = 0.001; 
 
 
+#pragma once 
+std::default_random_engine generator_gp;
 
-
+#pragma once
 bool comparison_gp(double a, double b){
     double tolerance  = abs( a - b);
     bool result = tolerance < eps;
@@ -89,7 +57,22 @@ public:
     double calculate_log_liklihood(void); // returns log
     double mahalanobis(arma::rowvec x, arma::rowvec mu, arma::mat inv_sig);  // calculates mh for specific term. 
     double log_density(arma::rowvec x, arma::rowvec mu, arma::mat inv_Sig, double log_det); // calculates a particular log-density for a specific group for a specific x 
-    void E_step(); // performs the e-step calculation on the mixture_model, stores data in z_igs. 
+
+    void E_step(); // performs the e-step calculation on the T_Mixture_Model, stores data in z_igs. 
+    // stochastic methods
+    void SE_step(void); // performs the stochastic estep .
+    void RE_step(void);  
+    void (Mixture_Model::*e_step)(void); 
+
+    void set_E_step(bool stochastic){
+        if(stochastic){
+            this->e_step = &Mixture_Model::SE_step; 
+        }
+        else{
+            // e_step is already regular. 
+        }
+    };
+
     void M_step_props(); // calculate the proportions and n_gs
     void M_step_mus(); // calculates the m step for mean vector
     arma::mat mat_inverse(arma::mat X); // matrix inverse 
@@ -444,6 +427,7 @@ Mixture_Model::Mixture_Model(arma::mat* in_data, int in_G, int in_model_id)
   logliks = vect; 
   tol_l = 1e-6;
   EYE = arma::eye(p,p); 
+  e_step = &Mixture_Model::RE_step; 
 }
 
 
@@ -579,8 +563,14 @@ double Mixture_Model::calculate_log_liklihood(void)
   return log_lik; 
 }
 
-// GENERAL E - Step for all famalies  
-void Mixture_Model::E_step()
+#pragma once 
+void Mixture_Model::E_step(){
+  (this->*e_step)();
+}
+
+// GENERAL E - Step for all famalies 
+#pragma once
+void Mixture_Model::RE_step()
 {
   // set up inter_mediate step for z_igs. 
   arma::mat inter_zigs = arma::mat(n,G,arma::fill::zeros); 
@@ -616,7 +606,7 @@ void Mixture_Model::E_step()
 
     double ss = arma::sum(inter_zigs.row(i));
     
-    if(std::isnan(ss)){
+    if(isnan(ss)){
       inter_zigs.row(i) = zi_gs.row(i);
       ss = arma::sum(inter_zigs.row(i));
     }
@@ -651,6 +641,95 @@ void Mixture_Model::E_step()
 
   zi_gs = inter_zigs; 
 }
+
+
+
+#pragma once
+void Mixture_Model::SE_step(void) // performs the stochastic estep . 
+{
+
+   // set up inter_mediate step for z_igs. 
+  arma::mat inter_zigs = arma::mat(n,G,arma::fill::zeros); 
+
+  // intermediate values 
+  arma::rowvec inter_density = arma::rowvec(G,arma::fill::zeros); 
+  double inter_row_sum; 
+
+  // calculate density proportions 
+  for(int i = 0; i < n; i++) 
+  { 
+    // clear row sum for every observation 
+    inter_row_sum = 0;
+    inter_density = arma::rowvec(G,arma::fill::zeros); 
+
+    for(int g = 0; g < G; g ++)
+    {
+      // numerator in e step term for mixture models
+      
+      inter_density[g] = std::pow((pi_gs[g])*std::exp(log_density(data.row(i),mus[g], inv_sigs[g],log_dets[g])),nu);
+      inter_row_sum += inter_density[g]; 
+    }
+      // after calculating inter_density assign the row to the z_ig matrix. 
+    for(int g = 0; g < G; g ++)
+    {
+      
+      double numer_g = inter_row_sum - inter_density[g]; 
+      double denom_g = inter_density[g]; 
+
+      inter_zigs.at(i,g) = 1.0/(1 + numer_g/denom_g);
+
+    }
+
+    double ss = arma::sum(inter_zigs.row(i));
+    
+    if(isnan(ss)){
+      inter_zigs.row(i) = zi_gs.row(i);
+      ss = arma::sum(inter_zigs.row(i));
+    }
+
+    // make sure that it adds up to one
+    int count = 0;
+    while(true) {
+
+      if(comparison_gp(ss,1.0)){ 
+        break; 
+      } 
+      double push_sum = 0.0; 
+
+      for(int gv = 0; gv < (G-1); gv++){
+        push_sum += inter_zigs.row(i)[gv]; 
+      }
+      
+      inter_zigs.row(i)[G-1] = 1.0 - push_sum; 
+      ss = inter_zigs.row(i)[G-1] + push_sum;
+
+
+      if(count == 10){
+        
+        inter_zigs.row(i) = zi_gs.row(i); // reset to last a posterori
+        // loggy(zi_gs.row(i) space  i );
+        break; 
+      }
+      count ++ ;
+    }
+
+  }
+  zi_gs = inter_zigs; 
+
+  inter_zigs = arma::mat(n,G,arma::fill::zeros); 
+
+  // go through current z_ig. 
+  for(int i = 0; i < n; i++){
+    std::vector<double> params = arma::conv_to< std::vector<double> >::from(zi_gs.row(i)); 
+    std::discrete_distribution<int> di (params.begin(), params.end());
+    int assign_class = di(generator_gp); 
+    inter_zigs.at(i,assign_class) = 1; 
+  }
+
+  zi_gs = inter_zigs; 
+
+}
+
 
 // Debug functions
 // sets each groups covariance to identity. 
@@ -1886,8 +1965,17 @@ Rcpp::List main_loop(arma::mat X, // data
                      )
 {
   
+
+  bool stochastic_check = false; 
+  // for stochastic variant
+  if (19 < model_type ){
+    model_type -= 20;  
+    stochastic_check = true;     
+  }
   // create mixture model class. 
   std::unique_ptr<Mixture_Model> m = std::unique_ptr<Mixture_Model>(create_model(&X,G,model_id,model_type));  
+
+  m->set_E_step(stochastic_check); 
 
   // Intialize 
   m->zi_gs = in_zigs;
@@ -2075,7 +2163,7 @@ Rcpp::List main_loop(arma::mat X, // data
     // Rcpp::Rcout  << "C++ Error has occured during iterations. See message below." << '\n'; 
     // Rcpp::Rcout << e.what() << '\n';
     return Rcpp::List::create(Rcpp::Named("Error") = "Iteration Error, decreasing loglik"); 
-    Rcpp::List ret_val = Rcpp::List::create(Rcpp::Named("X") = m->data,
+    Rcpp::List ret_val = Rcpp::List::create(
                                             Rcpp::Named("mus") = m->mus, 
                                             Rcpp::Named("sigs") = m->sigs,
                                             Rcpp::Named("G") = m->G, 
@@ -2089,7 +2177,7 @@ Rcpp::List main_loop(arma::mat X, // data
     return ret_val;
   }
 
-    Rcpp::List ret_val = Rcpp::List::create(Rcpp::Named("X") = m->data,
+    Rcpp::List ret_val = Rcpp::List::create(
                                             Rcpp::Named("mus") = m->mus, 
                                             Rcpp::Named("sigs") = m->sigs,
                                             Rcpp::Named("G") = m->G, 

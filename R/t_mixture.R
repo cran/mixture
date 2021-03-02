@@ -1,10 +1,10 @@
 
-# MAIN STPCM FUNCTION
-stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being the Model Name 
+# MAIN TPCM FUNCTION
+tpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being the Model Name 
                   start=2, label=NULL, # starting inputs , start = 0: random soft, start = 2, random hard. start = 3 mkmeans. 
                   veo=FALSE, da=c(1.0), # veo (variables exceed observations), da is deterministic annealing  
                   nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5, # convergence settings for matrix and loglik
-                  pprogress=FALSE, pwarning=FALSE, stochastic = FALSE)  # progress settings 
+                  pprogress=FALSE, pwarning=FALSE, stochastic=FALSE, constrained=FALSE)  # progress settings 
 {
   
   # Do some sanity checks. 
@@ -111,9 +111,9 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
     # go through all models
     for(model_name in mnames)
     {
-      if(pprogress) {	cat("Running STPCM Model:",model_name,"G=",G_i,"\n")}
+      if(pprogress) {	cat("Running TPCM Model:",model_name,"G=",G_i,"\n")}
       # calculate number of parameters once. 
-      number_of_params <- npar.model.skew(model_name,G=G_i,p=p,family_name = "ST")
+      number_of_params <- npar.model.skew(model_name,G=G_i,p=p,family_name = "T")
       
       check_veo <- TRUE
       
@@ -162,9 +162,9 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
         # GET MODEL ID 
         model_id <- model_to_id(model_name)
         # RUN MODEL 
-        model_results_i <- main_loop_st(X = t(data),
-                                        G = G_i, in_zigs = in_zigs, model_id = model_id,
-                                        model_type = model_id + stochastic*20, in_nmax = nmax, in_l_tol = atol,
+        model_results_i <- main_loop_t(X = data,
+                                        G = G_i, in_zigs = in_zigs, model_id = constrained + 20,
+                                        model_type = model_id + stochastic*20 , in_nmax = nmax, in_l_tol = atol,
                                         in_m_iter_max = mmax, in_m_tol = mtol, anneals = da,
                                         t_burn = burn)
         status <- "Failed Aitken's Convergence Criterion"
@@ -205,7 +205,7 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
   if(length(info_matrix$model_obj) < 1){                                       # plus 1 for row_tags due to c++
     stop("No models estimated")
   }
-  info_matrix$best_model <- st_get_best_model(info_matrix)
+  info_matrix$best_model <- t_get_best_model(info_matrix)
 	info_matrix$BIC <- construct_BIC_3D(info_matrix)
   info_matrix$map <- MAP(info_matrix$best_model$model_obj[[1]]$zigs)
   info_matrix$best_model$map <- info_matrix$map 
@@ -216,7 +216,7 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 		gpar[[k]] = list()		
 		gpar[[k]]$mu       = info_matrix$best_model$model_obj[[1]]$mus[[k]]
 		gpar[[k]]$sigma    = info_matrix$best_model$model_obj[[1]]$sigs[[k]]
-		gpar[[k]]$alpha    = info_matrix$best_model$model_obj[[1]]$alphas[[k]]
+		gpar[[k]]$vgs    = info_matrix$best_model$model_obj[[1]]$vgs[[k]]
 		gpar[[k]]$invSigma = try(solve(info_matrix$best_model$model_obj[[1]]$sigs[[k]]))
 		gpar[[k]]$logdet   = info_matrix$best_model$model_obj[[1]]$log_dets[k]
 
@@ -230,27 +230,27 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 
 
 
-  class(info_matrix) <- "stpcm"
+  class(info_matrix) <- "tpcm"
   
   return(info_matrix)
   
 }
 
 # PRINT SUMMARY AND PLOT STATEMENTS
-print.stpcm<-function(x, ...){
+print.tpcm<-function(x, ...){
   # split strings and parse
   splitted_strings <- strsplit(x$best_model$model_type," ")[[1]]
   # print to line parsed strings. 
   cat("The model chosen by applying the BIC criteria has", trimws(splitted_strings[5]), "component(s) and the", trimws(splitted_strings[2]), "covariance structure\n using", x$startobject, "\n"  )
 }
 # just prints the compare BIC matrix. 
-summary.stpcm<- function(object, ...){
+summary.tpcm<- function(object, ...){
   cat("BIC for each model, number of components (rows), and covariance structure (columns).\n")
 	print(object$BIC[,,3])
 }
 
 # plots a line graph of BICs. 
-plot.stpcm<- function(x, ...) {
+plot.tpcm<- function(x, ...) {
 	bicl = x$BIC[,,3]
   # you need to wrap this plot up in a print statement otherwise it doesnt work. 
   print(levelplot(bicl,
@@ -263,14 +263,14 @@ plot.stpcm<- function(x, ...) {
 
 
 # Print output for the gpcm_best class. 
-print.stpcm_best <-function(x, ...){
+print.tpcm_best <-function(x, ...){
   
   splitted_strings  <- strsplit(x$model_type," ")[[1]]
   cov_string <- splitted_strings[2]
   component_string <- splitted_strings[5]
   
   cat("============================\n")
-  cat("Best ST Model According To BIC \n")
+  cat("Best T Model According To BIC \n")
   cat("============================\n")
   cat("Status: ", strsplit(x$status," ")[[1]][1], "\n")
   cat("Covariance Model Type: ",cov_string,"\n")
@@ -286,7 +286,7 @@ print.stpcm_best <-function(x, ...){
 
 # Function: calculates the best model from a full list of models and their objects. 
 # Get best model according to BIC 
-st_get_best_model <- function(gpcm_model)
+t_get_best_model <- function(gpcm_model)
 {	
   # sanity checks for input 
   if(!is.list(gpcm_model)) { stop("Error: Input is not a gpcm_model") }
@@ -319,7 +319,7 @@ st_get_best_model <- function(gpcm_model)
   
   best_model$map <- MAP(best_model$model_obj[[1]]$zigs)
   
-  class(best_model) <- "stpcm_best"
+  class(best_model) <- "tpcm_best"
   
   return(best_model)
   

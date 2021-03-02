@@ -23,7 +23,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 				start=2, label=NULL, # starting inputs , start = 0: random soft, start = 2, random hard. start = 3 mkmeans. 
 				veo=FALSE, da=c(1.0), # veo (variables exceed observations), da is deterministic annealing  
 				nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5, # convergence settings for matrix and loglik
-				pprogress=FALSE, pwarning=TRUE)  # progress settings 
+				pprogress=FALSE, pwarning=TRUE, stochastic = FALSE)  # progress settings 
 {
 
 	# Do some sanity checks. 
@@ -182,7 +182,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 
 				# run model with settings 
 				model_results_i <- main_loop(X=data, G=G_i, in_zigs=in_zigs,# dataset G_i, z_igs
-										model_id=model_id, model_type=model_id, # for all intensive purposes these are the same. (They will change later)
+										model_id=model_id, model_type=model_id + 20*stochastic, # for all intensive purposes these are the same. (They will change later)
 										in_nmax=nmax, in_l_tol=atol, # em number of iterations 
 										in_m_iter_max=mmax,in_m_tol=mtol, # m_step matrix iterations and convergence settings 
 										anneals=da,t_burn=burn) # annealing and burn in settings. 
@@ -395,6 +395,7 @@ npar.gamma <- function(family_name = NULL, G=NULL){
 	else if (family_name == "SAL") npar = 0
 	else if (family_name == "GH") npar = G*2
 	else if (family_name == "ST") npar = G 
+	else if (family_name == "T") npar = G
 	else stop("family name is not properly defined")
 
 	return (npar)
@@ -690,6 +691,11 @@ e_step <- function(data, # matrix data, G integer, number of groups
 															in_m_obj=model_obj$model_obj[[1]],
 															init_zigs=in_zigs,in_nu=nu),
 							"stpcm_best" = st_e_step_internal(X=data,G=G,
+															model_id=model_name_id,
+															model_type=model_name_id,
+															in_m_obj=model_obj$model_obj[[1]],
+															init_zigs=in_zigs,in_nu=nu),
+							"tpcm_best" = t_e_step_internal(X=data,G=G,
 															model_id=model_name_id,
 															model_type=model_name_id,
 															in_m_obj=model_obj$model_obj[[1]],

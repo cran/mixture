@@ -1,6 +1,13 @@
-mixture version 2.0.2 2021-01-17:
+mixture version 2.0.3 2021-03-02:
+- Stochastic EM added.
+- Stability fixes for skewed models added. 
+- Reduced compilation time.
+- pcm function added.
+- t-eigen family added.
 
-- Edits to configure file.
+mixture version 2.0.2 2021-01-16:
+
+- Fixed configure file
 
 mixture version 2.0.1 2021-01-15:
 

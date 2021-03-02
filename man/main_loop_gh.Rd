@@ -13,8 +13,8 @@ main_loop_gh(X, G, model_id,
         in_m_tol, anneals, t_burn = 5L) 
 }
 \arguments{
-  \item{X}{
-A numeric matrix of values with observations along rows, and dimension along columns. Is allowed to have NAs. (No full rows of NAs)
+      \item{X}{
+A matrix or data frame such that rows correspond to observations and columns correspond to variables. Note that this function currently only works with multivariate data p > 1. 
 }
   \item{G}{
 	A single positive integer value representing number of groups. 
@@ -61,7 +61,6 @@ A numeric matrix of values with observations along rows, and dimension along col
 \item{alphas}{A vector of skewness vectors for each group}
 \item{omegas}{First set of gamma parameters for each group}
 \item{lambdas}{Second set of gamma parameters for each group}
-\item{X}{Imputed dataset (if original had NAs)}
 }
 \author{
 Nik Pocuca, Ryan P. Browne and Paul D. McNicholas.

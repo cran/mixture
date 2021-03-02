@@ -1,25 +1,3 @@
-// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; indent-tabs-mode: nil; -*-
-#define ARMA_USE_LAPACK
-#define ARMA_USE_BLAS
-#define ARMA_HAVE_STD_ISFINITE
-#define ARMA_HAVE_STD_ISINF
-#define ARMA_HAVE_STD_ISNAN
-#define ARMA_HAVE_STD_SNPRINTF
-#define ARMA_DONT_PRINT_ERRORS
-
-
-
-// we only include RcppArmadillo.h which pulls Rcpp.h in for us
-#include "RcppArmadillo.h"
-#define NDEBUG 1
-#include <Rcpp.h> 
-#include "ST_Model/ST_Mixture_Model.h"
-#include <gsl/gsl_errno.h>
-#include <memory>
-
-// [[Rcpp::depends(RcppArmadillo)]]
-// [[Rcpp::depends(RcppGSL)]]
-// [[Rcpp::depends(BH)]]    
 
 
 // create model function, generates a model pointer and returns it as a general mixture_model pointer
@@ -102,11 +80,20 @@ Rcpp::List main_loop_st(arma::mat X, // data
                      )
 {
   
+  bool stochastic_check = false; 
+  // for stochastic variant
+  if (19 < model_type ){
+    model_type -= 20;  
+    stochastic_check = true;     
+  }
+
   // create mixture model class. 
   std::unique_ptr<ST_Mixture_Model> m = std::unique_ptr<ST_Mixture_Model>(st_create_model(&X,G,model_id,model_type));  
 
+  m->set_E_step(stochastic_check); 
 
-  if(std::isnan(in_l_tol)){
+
+  if(isnan(in_l_tol)){
     m->tol_l = 1e-6;
   }
   else{
@@ -325,12 +312,13 @@ Rcpp::List main_loop_st(arma::mat X, // data
       }
     }
   }
-  catch(const std::exception& e)
+    catch(const std::exception& e)
   {
- 
-    return Rcpp::List::create(Rcpp::Named("Error") = e.what()); 
-    Rcpp::List ret_val = Rcpp::List::create(Rcpp::Named("X") = m->data,
-                                            Rcpp::Named("mus") = m->mus,
+
+
+    if( std::string(e.what()).compare("logliklihood was infinite, back to previous step and returned results")){
+    Rcpp::List ret_val = Rcpp::List::create(
+                                            Rcpp::Named("mus") = m->mus, 
                                             Rcpp::Named("alphas") = m->alphas, 
                                             Rcpp::Named("sigs") = m->sigs,
                                             Rcpp::Named("G") = m->G, 
@@ -340,12 +328,13 @@ Rcpp::List main_loop_st(arma::mat X, // data
                                             Rcpp::Named("n_gs") = m->n_gs,
                                             Rcpp::Named("log_dets") = m->log_dets,
                                             Rcpp::Named("logliks") = m->logliks);
-                                            
-    
-    return ret_val;
+      return(ret_val);
+    }
+
+    return Rcpp::List::create(Rcpp::Named("Error") = e.what()); 
   }
 
-    Rcpp::List ret_val = Rcpp::List::create(Rcpp::Named("X") = m->data,
+    Rcpp::List ret_val = Rcpp::List::create(
                                             Rcpp::Named("mus") = m->mus, 
                                             Rcpp::Named("alphas") = m->alphas, 
                                             Rcpp::Named("sigs") = m->sigs,

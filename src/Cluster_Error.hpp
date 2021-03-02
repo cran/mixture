@@ -20,6 +20,13 @@ struct infinite_loglik_except : std::exception
   const char* what() const noexcept {return "logliklihood is infinite";}
 }; 
 
+struct infinite_loglik_with_return_except : std::exception
+{
+  const char* what() const noexcept {return "logliklihood was infinite, back to previous step and returned results";}
+  
+};
+
+
 struct below_1_ng_except : std::exception 
 {
   const char* what() const noexcept {return "one of the N_gs dropped below 1";}

@@ -11,15 +11,19 @@
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_sf_result.h> 
 #include <exception> 
+#include <random> 
 #include "../Cluster_Error.hpp"
 
 #define loggy(x) Rcpp::Rcout << x << std::endl 
 #define bessy(nu,x) LG_k_bessel(nu,x)
 #define bessy_prime(nu,x) (bessy(nu+eps,x) - bessy(nu,x))/(eps)
 #define space << " " << 
-const double eps = 0.001; 
 const double two_eps = 0.002;
 const double pi_my = 3.1415926535897932;
+
+#pragma once 
+std::default_random_engine generator_gh;
+
 
 #pragma once 
 bool comparison(double a, double b);
@@ -106,7 +110,21 @@ class GH_Mixture_Model
                         double lambda_g); 
         // calculates a particular log-density for a specific group for a specific x
 
-        void E_step(); // performs the e-step calculation on the mixture_model, stores data in z_igs.
+        void E_step(); // performs the e-step calculation on the T_Mixture_Model, stores data in z_igs. 
+        // stochastic methods
+        void SE_step(void); // performs the stochastic estep .
+        void RE_step(void);  
+        void (GH_Mixture_Model::*e_step)(void); 
+
+        void set_E_step(bool stochastic){
+            if(stochastic){
+                this->e_step = &GH_Mixture_Model::SE_step; 
+            }
+            else{
+                // e_step is already regular. 
+            }
+        };
+        
         void M_step_props(); // calculate the proportions and n_gs
         void M_step_init_gaussian(void); // initializes mu, sig, and alphas according to gaussian settings. alpha is really small.  
         double k_bessel(double nu, double x); 
@@ -190,7 +208,7 @@ double GH_Mixture_Model::LG_k_bessel(double nu, double x){
   
   status = gsl_sf_bessel_lnKnu_e(nu,abs(x), &result );
     
-    if(std::isnan(result.val)){
+    if(isnan(result.val)){
       status = 1; 
     }
 
@@ -202,7 +220,7 @@ double GH_Mixture_Model::LG_k_bessel(double nu, double x){
     // try scaled version 
     status = gsl_sf_bessel_Knu_scaled_e(nu, abs(x), & result); 
     
-    if(std::isnan(result.val)){
+    if(isnan(result.val)){
       status = 1; 
     }
 
@@ -214,9 +232,9 @@ double GH_Mixture_Model::LG_k_bessel(double nu, double x){
 
       try{ 
 
-          approx_result = 0.5*(log(M_PI) - log(2.0) - log(nu) ) - nu*log(M_E*x) + nu*log(2*nu); 
+          approx_result = 0.5*(log(M_PI) - log(2.0) - log(nu) ) - nu*log(M_E*x) + nu*log(2.0*nu); 
         
-          if(std::isnan(approx_result)){
+          if(isnan(approx_result)){
             // overflow has occured. 
             return (log(1e-100));
           }
@@ -295,6 +313,7 @@ GH_Mixture_Model::GH_Mixture_Model(arma::mat* in_data, int in_G, int model_id ){
     tol_l = 1e-6;
     nu_d = 1.0; 
     EYE = arma::eye(p,p); 
+    e_step = &GH_Mixture_Model::RE_step; 
 }
 
 
@@ -338,7 +357,7 @@ bool GH_Mixture_Model::check_aitkens(void) {
         int last_index = logliks.size();
         double l_p1 =  logliks[last_index-1];
         double l_t =  logliks[last_index-2];
-        if( std::isnan(l_p1) || std::isinf(l_p1) ){
+        if( isnan(l_p1) || isinf(l_p1) ){
           infinite_loglik_except e; 
           throw e; 
         }
@@ -375,7 +394,7 @@ bool GH_Mixture_Model::track_lg(bool check)
 
     double c_loglik = calculate_log_liklihood();
 
-    if( std::isnan(c_loglik) || std::isinf(c_loglik) ){
+    if( isnan(c_loglik) || isinf(c_loglik) ){
         
         if(logliks.size() < 10){
           infinite_loglik_except e;
@@ -388,7 +407,6 @@ bool GH_Mixture_Model::track_lg(bool check)
         cbar_gs = prev_cbar_gs; 
 
         M_step_props();
-        M_step_mus();
         M_step_alphas(); // new function to update mus 
         M_step_Ws(); 
         m_step_sigs(); 
@@ -403,7 +421,6 @@ bool GH_Mixture_Model::track_lg(bool check)
 
             E_step_latent();
             M_step_props();
-            M_step_mus();
             M_step_alphas(); // new function to update alphas
             M_step_Ws(); 
             m_step_sigs(); 
@@ -411,20 +428,21 @@ bool GH_Mixture_Model::track_lg(bool check)
 
             c_loglik = calculate_log_liklihood();
 
-            if(std::isnan(c_loglik) || std::isinf(c_loglik)){
-              infinite_loglik_except e; 
-              throw e;
+            if(isnan(c_loglik) || isinf(c_loglik)){
               zi_gs = prev_zi_gs; 
               abar_gs = prev_abar_gs;
               bbar_gs = prev_bbar_gs;
               cbar_gs = prev_cbar_gs; 
+              
+              E_step_latent();
               M_step_props();
-              M_step_mus();
               M_step_alphas(); // new function to update alphas
               M_step_Ws(); 
               m_step_sigs(); 
               M_step_gamma(); 
-
+              
+              infinite_loglik_with_return_except e; 
+              throw e;
             }
             check_aitkens();
             logliks.push_back(c_loglik);
@@ -503,7 +521,7 @@ double GH_Mixture_Model::log_density(arma::vec x, // vector comes in as 1 x p
   double third_term = (nu/2.0)*( log(delta + omega_g) - log( rho + omega_g));
   double bessel_term = LG_k_bessel(abs(nu),bess_input);
 
-  if( std::isnan(bessel_term)){
+  if( isnan(bessel_term)){
     bessel_term = log(1e-10);
   }
 
@@ -608,8 +626,14 @@ void GH_Mixture_Model::M_step_init_gaussian(void) {
 
 
 
-// GENERAL E - Step for all famalies  
-void GH_Mixture_Model::E_step()
+#pragma once 
+void GH_Mixture_Model::E_step(){
+  (this->*e_step)();
+}
+
+
+#pragma once
+void GH_Mixture_Model::SE_step(void) // performs the stochastic estep . 
 {
 
   // set up inter_mediate step for z_igs. 
@@ -652,7 +676,100 @@ void GH_Mixture_Model::E_step()
 
     double ss = arma::sum(inter_zigs.row(i));
     
-    if(std::isnan(ss)){
+    if(isnan(ss)){
+      inter_zigs.row(i) = zi_gs.row(i);
+      ss = arma::sum(inter_zigs.row(i));
+    }
+
+    // make sure that it adds up to one
+    int count = 0;
+    while(true) {
+
+      if(comparison(ss,1.0)){ 
+        break; 
+      } 
+      double push_sum = 0.0; 
+
+      for(int gv = 0; gv < (G-1); gv++){
+        push_sum += inter_zigs.row(i)[gv]; 
+      }
+      
+      inter_zigs.row(i)[G-1] = 1.0 - push_sum; 
+      ss = inter_zigs.row(i)[G-1] + push_sum;
+
+
+      if(count == 10){
+        
+        inter_zigs.row(i) = zi_gs.row(i); // reset to last a posterori
+        break; 
+      }
+      count ++ ;
+    }
+
+
+  }
+  zi_gs = inter_zigs; 
+
+  inter_zigs = arma::mat(n,G,arma::fill::zeros); 
+
+  // go through current z_ig. 
+  for(int i = 0; i < n; i++){
+    std::vector<double> params = arma::conv_to< std::vector<double> >::from(zi_gs.row(i)); 
+    std::discrete_distribution<int> di (params.begin(), params.end());
+    int assign_class = di(generator_gh); 
+    inter_zigs.at(i,assign_class) = 1; 
+  }
+
+  zi_gs = inter_zigs; 
+
+}
+
+
+// GENERAL E - Step for all famalies  
+void GH_Mixture_Model::RE_step()
+{
+
+  // set up inter_mediate step for z_igs. 
+  arma::mat inter_zigs = arma::mat(n,G,arma::fill::zeros); 
+
+  // intermediate values 
+  arma::rowvec inter_density = arma::rowvec(G,arma::fill::zeros); 
+  double inter_row_sum; 
+
+  // calculate density proportions 
+  for(int i = 0; i < n; i++) 
+  { 
+    // clear row sum for every observation 
+    inter_row_sum = 0.0;
+    inter_density = arma::rowvec(G,arma::fill::zeros); 
+
+    for(int g = 0; g < G; g ++)
+    {
+      // numerator in e step term for mixture models
+
+      double log_dens = log_density(data.col(i),mus[g],alphas[g], // basic parameters
+                                                        a_is[g][i],c_is[g][i],b_is[g][i], // latent parameters
+                                                        inv_sigs[g],log_dets[g],omegas[g],lambdas[g]);
+                                                        
+      inter_density[g] = std::pow((pi_gs[g])*exp(log_dens),nu_d); // other 
+
+      inter_row_sum += inter_density[g]; 
+    }
+    
+    // after calculating inter_density assign the row to the z_ig matrix. 
+    for(int g = 0; g < G; g ++)
+    {
+      
+      double numer_g = inter_row_sum - inter_density[g]; 
+      double denom_g = inter_density[g]; 
+
+      inter_zigs.at(i,g) = 1.0/(1 + numer_g/denom_g);
+
+    }
+
+    double ss = arma::sum(inter_zigs.row(i));
+    
+    if(isnan(ss)){
       inter_zigs.row(i) = zi_gs.row(i);
       ss = arma::sum(inter_zigs.row(i));
     }
@@ -886,9 +1003,9 @@ void GH_Mixture_Model::M_step_gamma(void) {
     lambda_new = cbar_gs[g]*lambdas[g]/bess_prime; 
     omega_new = omegas[g] - q_deriv(g)/q_deriv_2(g); 
     //if(lambda_new < 0){ lambda_new = abs(lambda_new);}
-    if(std::isnan(lambda_new) || std::isinf(lambda_new)){}
+    if(isnan(lambda_new) || isinf(lambda_new)){}
     else{ lambdas[g] = lambda_new;}
-    if(std::isnan(omega_new) || std::isinf(omega_new)){}
+    if(isnan(omega_new) || isinf(omega_new)){}
     else{omegas[g] = omega_new; }
   }
 

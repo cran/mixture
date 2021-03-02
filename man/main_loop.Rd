@@ -13,8 +13,8 @@ main_loop(X, G, model_id,
         in_m_tol, anneals, t_burn = 5L) 
 }
 \arguments{
-  \item{X}{
-A numeric matrix of values with observations along rows, and dimension along columns. Is allowed to have NAs. (No full rows of NAs)
+    \item{X}{
+A matrix or data frame such that rows correspond to observations and columns correspond to variables. Note that this function currently only works with multivariate data p > 1. 
 }
   \item{G}{
 	A single positive integer value representing number of groups. 
@@ -57,7 +57,6 @@ A numeric matrix of values with observations along rows, and dimension along col
 \item{G}{An integer representing the number of groups.}
 \item{sigs}{A vector of covariance matrices for each group (note you may have to reshape this)} 
 \item{mus}{A vector of mean vectors for each group}
-\item{X}{Imputed dataset (if original had NAs)}
 }
 \author{
 Nik Pocuca, Ryan P. Browne and Paul D. McNicholas.

@@ -14,17 +14,25 @@ export(main_loop)
 export(main_loop_vg)
 export(main_loop_gh)
 export(main_loop_st)
+export(main_loop_t)
 export(gpcm)
 export(get_best_model)
 export(vgpcm)
 export(ghpcm)
 export(stpcm)
+export(tpcm)
 export(e_step)
 export(z_ig_random_soft)
 export(z_ig_random_hard)
 export(z_ig_kmeans)
 export(MAP)
 export(ARI)
+export(pcm)
+
+
+S3method(print, pcm)
+S3method(summary, pcm)
+
 
 S3method(print, gpcm)
 S3method(plot, gpcm)
@@ -47,5 +55,10 @@ S3method(plot, stpcm)
 S3method(summary, stpcm)
 S3method(print, stpcm_best)
 
+
+S3method(print, tpcm)
+S3method(plot, tpcm)
+S3method(summary, tpcm)
+S3method(print, tpcm_best)
 
 

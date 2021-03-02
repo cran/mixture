@@ -18,21 +18,10 @@
 #define bessy(nu,x) LG_k_bessel(nu,x)
 #define bessy_prime(nu,x) (bessy(nu+eps,x) - bessy(nu,x))/(eps)
 #define space << " " << 
-const double eps = 0.001; 
-const double two_eps = 0.002;
-const double pi_my = 3.1415926535897932;
 
 
-#pragma omp declare reduction( + : arma::rowvec : omp_out += omp_in ) \
-                 initializer( omp_priv = omp_orig )   
-
-
-#pragma omp declare reduction( + : arma::vec : omp_out += omp_in ) \
-                 initializer( omp_priv = omp_orig )   
-
-
-#pragma omp declare reduction( + : arma::mat : omp_out += omp_in ) \
-                 initializer( omp_priv = omp_orig )   
+#pragma once 
+std::default_random_engine generator_st;
 
 
 #pragma once
@@ -105,7 +94,21 @@ class ST_Mixture_Model
                         ); 
         // calculates a particular log-density for a specific group for a specific x
 
-        void E_step(); // performs the e-step calculation on the mixture_model, stores data in z_igs.
+        void E_step(); // performs the e-step calculation on the T_Mixture_Model, stores data in z_igs. 
+        // stochastic methods
+        void SE_step(void); // performs the stochastic estep .
+        void RE_step(void);  
+        void (ST_Mixture_Model::*e_step)(void); 
+
+        void set_E_step(bool stochastic){
+            if(stochastic){
+                this->e_step = &ST_Mixture_Model::SE_step; 
+            }
+            else{
+                // e_step is already regular. 
+            }
+        };
+
         void M_step_props(); // calculate the proportions and n_gs
         void M_step_init_gaussian(void); // initializes mu, sig, and alphas according to gaussian settings. alpha is really small.  
         double k_bessel(double nu, double x); 
@@ -185,7 +188,7 @@ double ST_Mixture_Model::LG_k_bessel(double nu, double x){
   
   status = gsl_sf_bessel_lnKnu_e(nu,abs(x), &result );
     
-    if(std::isnan(result.val)){
+    if(isnan(result.val)){
       status = 1; 
     }
 
@@ -197,7 +200,7 @@ double ST_Mixture_Model::LG_k_bessel(double nu, double x){
     // try scaled version 
     status = gsl_sf_bessel_Knu_scaled_e(nu, abs(x), & result); 
     
-    if(std::isnan(result.val)){
+    if(isnan(result.val)){
       status = 1; 
     }
 
@@ -209,9 +212,9 @@ double ST_Mixture_Model::LG_k_bessel(double nu, double x){
 
       try{ 
 
-          approx_result = 0.5*(log(M_PI) - log(2.0) - log(nu) ) - nu*log(M_E*x) + nu*log(2*nu); 
+          approx_result = 0.5*(log(M_PI)  - log(2.0) - log(nu) ) - nu*log(M_E*x) + nu*log(2.0*nu); 
         
-          if(std::isnan(approx_result)){
+          if(isnan(approx_result)){
             // overflow has occured. 
             return (log(1e-100));
           }
@@ -287,6 +290,7 @@ ST_Mixture_Model::ST_Mixture_Model(arma::mat* in_data, int in_G, int model_id ){
     tol_l = 1e-6;
     nu_d = 1.0; 
     EYE = arma::eye(p,p); 
+    e_step = &ST_Mixture_Model::RE_step; 
 }
 
 
@@ -330,7 +334,7 @@ bool ST_Mixture_Model::check_aitkens(void) {
         double l_p1 =  logliks[last_index-1];
         double l_t =  logliks[last_index-2];
 
-        if( std::isnan(l_p1) || std::isinf(l_p1) ){
+        if( isnan(l_p1) || isinf(l_p1) ){
           infinite_loglik_except e; 
           throw e;
         }
@@ -366,9 +370,9 @@ bool ST_Mixture_Model::track_lg(bool check)
   }
   else {
     double c_loglik = calculate_log_liklihood();
-
+    bool conv_check = false; 
     // loggy("loglik: " << c_loglik);
-    if( std::isnan(c_loglik) || std::isinf(c_loglik) ){ 
+    if( isnan(c_loglik) || isinf(c_loglik) ){ 
         
         if(logliks.size() < 10){
           infinite_loglik_except e;
@@ -381,43 +385,43 @@ bool ST_Mixture_Model::track_lg(bool check)
         cbar_gs = prev_cbar_gs; 
   
         M_step_props();
-        M_step_mus();
         M_step_alphas(); // new function to update mus 
         M_step_Ws(); 
         m_step_sigs(); 
         M_step_gamma(); 
- 
-        bool conv_check = check_aitkens();
 
-        for( size_t i = 0; i < 100; i++) {
+        for( size_t i = 0; i < 50; i++) {
 
-          if(conv_check == true){ return true; }
+          if(check_aitkens() == true){ return true; }
 
           else 
           {
+       
             E_step_latent();
             M_step_props();
-            M_step_mus();
             M_step_alphas(); // new function to update alphas
             M_step_Ws(); 
             m_step_sigs(); 
             M_step_gamma(); 
 
+
             c_loglik = calculate_log_liklihood();
 
-            if(std::isnan(c_loglik) || std::isinf(c_loglik)){
-              infinite_loglik_except e; 
-              throw e;
-              zi_gs = prev_zi_gs; 
+            if(isnan(c_loglik) || isinf(c_loglik)){
+             zi_gs = prev_zi_gs; 
               abar_gs = prev_abar_gs;
               bbar_gs = prev_bbar_gs;
               cbar_gs = prev_cbar_gs; 
+              
+              E_step_latent();
               M_step_props();
-              M_step_mus();
               M_step_alphas(); // new function to update alphas
               M_step_Ws(); 
               m_step_sigs(); 
               M_step_gamma(); 
+              
+              infinite_loglik_with_return_except e; 
+              throw e;
 
             }
 
@@ -496,7 +500,7 @@ double ST_Mixture_Model::log_density(arma::vec x, // vector comes in as 1 x p
   if( comparison_st(delta,0) ){
     delta = 0.0001;
   }
-  // logdens=mybessel(abs(tau),sqrt((delta+nu)*rho))+log(2.0)+0.5*nu*log(nu/2)+
+  // logdens=mybessel(abs(tau),sqrt((delta+nu)*rho))+log(2)+0.5*nu*log(nu/2)+
   // tr(Sigma*(X-M)*A')-(p/2)*log(2*pi)+(1/2)*detSig-log(gamma(nu/2))+(tau/2)*(log(delta+nu)-log(rho))
 
 
@@ -506,7 +510,7 @@ double ST_Mixture_Model::log_density(arma::vec x, // vector comes in as 1 x p
   double third_term = (nu/2.0)*( log(delta + v_g) - log(rho));
   double bessel_term = LG_k_bessel(abs(nu),bess_input);
 
-  if( std::isnan(bessel_term)){
+  if( isnan(bessel_term)){
     bessel_term = log(1e-10);
   }
 
@@ -609,9 +613,14 @@ void ST_Mixture_Model::M_step_init_gaussian(void) {
 }
 
 
+#pragma once 
+void ST_Mixture_Model::E_step(){
+  (this->*e_step)();
+}
 
-// GENERAL E - Step for all famalies  
-void ST_Mixture_Model::E_step()
+
+#pragma once
+void ST_Mixture_Model::SE_step(void) // performs the stochastic estep . 
 {
 
   // set up inter_mediate step for z_igs. 
@@ -653,7 +662,7 @@ void ST_Mixture_Model::E_step()
     }
     double ss = arma::sum(inter_zigs.row(i));
     
-    if(std::isnan(ss)){
+    if(isnan(ss)){
       inter_zigs.row(i) = zi_gs.row(i);
       ss = arma::sum(inter_zigs.row(i));
     }
@@ -679,7 +688,104 @@ void ST_Mixture_Model::E_step()
         
         inter_zigs.row(i) = zi_gs.row(i); // reset to last a posterori
         // loggy(zi_gs.row(i) space  i );
-        loggy("estep count exceeded");
+        // loggy("estep count exceeded");
+        break; 
+      }
+      count ++ ;
+    }
+
+
+  }
+
+  zi_gs = inter_zigs; 
+
+  inter_zigs = arma::mat(n,G,arma::fill::zeros); 
+
+  // go through current z_ig. 
+  for(int i = 0; i < n; i++){
+    std::vector<double> params = arma::conv_to< std::vector<double> >::from(zi_gs.row(i)); 
+    std::discrete_distribution<int> di (params.begin(), params.end());
+    int assign_class = di(generator_st); 
+    inter_zigs.at(i,assign_class) = 1; 
+  }
+
+  zi_gs = inter_zigs; 
+
+}
+
+
+
+
+// GENERAL E - Step for all famalies  
+void ST_Mixture_Model::RE_step()
+{
+
+  // set up inter_mediate step for z_igs. 
+  arma::mat inter_zigs = arma::mat(n,G,arma::fill::zeros); 
+
+  // intermediate values 
+  arma::rowvec inter_density = arma::rowvec(G,arma::fill::zeros); 
+  double inter_row_sum; 
+
+  // calculate density proportions 
+  for(int i = 0; i < n; i++) 
+  { 
+    // clear row sum for every observation 
+    inter_row_sum = 0.0;
+    inter_density = arma::rowvec(G,arma::fill::zeros); 
+
+    for(int g = 0; g < G; g ++)
+    {
+      // numerator in e step term for mixture models
+
+      double log_dens = log_density(data.col(i),mus[g],alphas[g], // basic parameters
+                                                        a_is[g][i],c_is[g][i],b_is[g][i], // latent parameters
+                                                        inv_sigs[g],log_dets[g],vs[g]);
+                                                        
+      inter_density[g] = std::pow((pi_gs[g])*exp(log_dens),nu_d); // other 
+
+      inter_row_sum += inter_density[g]; 
+    }
+    
+    // after calculating inter_density assign the row to the z_ig matrix. 
+    for(int g = 0; g < G; g ++)
+    {
+      
+      double numer_g = inter_row_sum - inter_density[g]; 
+      double denom_g = inter_density[g]; 
+
+      inter_zigs.at(i,g) = 1.0/(1 + numer_g/denom_g);
+
+    }
+    double ss = arma::sum(inter_zigs.row(i));
+    
+    if(isnan(ss)){
+      inter_zigs.row(i) = zi_gs.row(i);
+      ss = arma::sum(inter_zigs.row(i));
+    }
+
+    // make sure that it adds up to one
+    int count = 0;
+    while(true) {
+
+      if(comparison_st(ss,1.0)){ 
+        break; 
+      } 
+      double push_sum = 0.0; 
+
+      for(int gv = 0; gv < (G-1); gv++){
+        push_sum += inter_zigs.row(i)[gv]; 
+      }
+      
+      inter_zigs.row(i)[G-1] = 1.0 - push_sum; 
+      ss = inter_zigs.row(i)[G-1] + push_sum;
+
+
+      if(count == 10){
+        
+        inter_zigs.row(i) = zi_gs.row(i); // reset to last a posterori
+        // loggy(zi_gs.row(i) space  i );
+        // loggy("estep count exceeded");
         break; 
       }
       count ++ ;
@@ -1048,8 +1154,8 @@ void ST_Mixture_Model::M_step_gamma(void) {
     // Rcpp::Rcout << "abar: " << abar_gs[g] << " bbar: " <<  bbar_gs[g] << " cbar: " << cbar_gs[g] << std::endl;    
     const double eta_g = bbar_gs[g] - cbar_gs[g] - 1; 
     try {
-      double gam_g = gamma_solve(eta_g,vs[g], 0.1);
-      if(!std::isnan(gam_g) && !comparison_st(gam_g,20.0)){
+      double gam_g = st_gamma_solve(eta_g,vs[g], 0.1);
+      if(!isnan(gam_g) && !comparison_st(gam_g,20.0)){
         vs[g] = gam_g; 
       }
     } catch(const std::exception& e){

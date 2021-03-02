@@ -1,14 +1,14 @@
-\name{stpcm}
-\alias{stpcm}
-\title{Skew-t Parsimonious Clustering Models}
+\name{pcm}
+\alias{pcm}
+\title{Parsimonious Clustering Models}
 \description{
-Carries out model-based clustering or classification using some or all of the 14 parsimonious Skew-t clustering models (STPCM).}
+Carries out model-based clustering or classification using some or all of the 14 parsimonious settings with any one of the GPCM,STPCM,VGPCM, or GHPCM families.}
 \usage{
-stpcm(data=NULL, G=1:3, mnames=NULL,
-		start=2, label=NULL, 
+pcm(data=NULL, G=1:3, pcmfamily=c(gpcm,vgpcm,tpcm),
+		mnames=NULL, start=2, label=NULL, 
 		veo=FALSE, da=c(1.0),
 		nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5,
-		pprogress=FALSE, pwarning=FALSE, stochastic = FALSE) 
+		pprogress=FALSE, pwarning=FALSE) 
 }
 \arguments{
   \item{data}{
@@ -16,6 +16,9 @@ A matrix or data frame such that rows correspond to observations and columns cor
 }
   \item{G}{
 	A sequence of integers giving the number of components to be used.
+}
+\item{pcmfamily}{
+	The family of models to be used. If \code{NULL} then all are fitted. 
 }
   \item{mnames}{
 	The models (i.e., covariance structures) to be used. If \code{NULL} then all 14 are fitted. 
@@ -57,50 +60,20 @@ A matrix or data frame such that rows correspond to observations and columns cor
   \item{pwarning}{
 	If \code{TRUE} print the warnings.
 }
-  \item{stochastic}{
-	If \code{TRUE} , it will run stochastic E step variant. 
-}
 }
 \details{
 The data \code{x} are either clustered or classified using Skew-t mixture models with some or all of the 14 parsimonious covariance structures described in Celeux & Govaert (1995). The algorithms given by Celeux & Govaert (1995) is used for 12 of the 14 models; the "EVE" and "VVE" models use the algorithms given in Browne & McNicholas (2014). Starting values are very important to the successful operation of these algorithms and so care must be taken in the interpretation of results. 
 }
 \value{
-An object of class \code{vgpcm} is a list with components:
-\item{map}{A vector of integers indicating the maximum \emph{a posteriori} classifications for the best model.}
-\item{model_objs}{A list of all estimated models with parameters returned from the C++ call.}
-\item{best_model}{A class of vgpcm_best containing; the number of groups for the best model, the covariance structure, and Bayesian Information Criterion (BIC) value.}
-\item{loglik}{The log-likelihood values from fitting the best model.}
-\item{z}{A matrix giving the raw values upon which \code{map} is based.}
-\item{BIC}{A G by mnames by 3 dimensional array with values pertaining to BIC calculations. (legacy)}
-\item{gpar}{A list object for each cluster pertaining to parameters. (legacy)}
-\item{startobject}{The type of object inputted into \code{start}.}
-\item{row_tags}{If there were NAs in the original dataset, a vector of indices referencing the row of the imputed vectors is given.}
-\subsection{Best Model}{
-An object of class \code{stpcm_best} is a list with components:
-}
-\item{model_type}{A string containg summarized information about the type of model estimated (Covariance structure and number of groups).}
-\item{model_obj}{An internal list containing all parameters returned from the C++ call. }
-\item{BIC}{Bayesian Index Criterion (positive scale, bigger is better).}
-\item{loglik}{Log liklihood from the estimated model. }
-\item{nparam}{Number of a parameters in the mode.}
-\item{startobject}{The type of object inputted into \code{start}.}
-\item{G}{An integer representing the number of groups.}
-\item{cov_type}{A string representing the type of covariance matrix (see 14 models).}
-\item{status}{Convergence status of EM algorithm according to Aitken's Acceleration}
-\item{map}{A vector of integers indicating the maximum \emph{a posteriori} classifications for the best model.}
-\item{row_tags}{If there were NAs in the original dataset, a vector of indices referencing the row of the imputed vectors is given.}
-\subsection{Internal Objects}{
-All classes contain an internal list called \code{model_obj} or \code{model_objs} with the following components:
-}
-\item{zigs}{ a posteori matrix }
-\item{G}{An integer representing the number of groups.}
-\item{sigs}{A vector of covariance matrices for each group} 
-\item{mus}{A vector of location vectors for each group}
-\item{alphas}{A vector containg skewness vectors for each group}
-\item{gammas}{A vector containing estimated gamma parameters for each group}
+An object of class \code{pcm} is a list with components:
+\item{gpcm}{If applicable, the output of running the Gaussian Parsimonious Family.}
+\item{vgpcm}{If applicable, the output of running the Variance-Gamma Parsimonious Family.}
+\item{stpcm}{If applicable, the output of running the Skew-T Parsimonious Family.}
+\item{ghpcm}{If applicable, the output of running the Generalized Hyperbolic Parsimonious Family.}
+\item{best_model}{An object of corresponding to the output of the best performing family.}
 }
 \note{
-Dedicated \code{print}, \code{plot} and \code{summary} functions are available for objects of class \code{vgpcm}.
+Dedicated \code{print}, and \code{summary} functions are available for objects of class \code{pcm}, \code{gpcm}, \code{ghpcm}, \code{stpcm}, or \code{vgpcm}.
 
 }
 \author{
@@ -113,31 +86,22 @@ McNicholas, P.D. (2016), \emph{Mixture Model-Based Classification}. Boca Raton: 
 
 Browne, R.P. and McNicholas, P.D. (2014). Estimating common principal components in high dimensions. \emph{Advances in Data Analysis and Classification} \bold{8}(2), 217-226.
 
+Browne, R.P. and McNicholas, P.D. (2015), 'A mixture of generalized hyperbolic distributions', Canadian Journal of Statistics 43(2), 176-198. 
+
 Wei, Y., Tang, Y. and McNicholas, P.D. (2019), 'Mixtures of generalized hyperbolic distributions and mixtures of skew-t distributions for model-based clustering with incomplete data', Computational Statistics and Data Analysis 130, 18-41.
 
 Celeux, G., Govaert, G. (1995). Gaussian parsimonious clustering models. \emph{Pattern Recognition} \bold{28}(5), 781-793.
 }
 \examples{
-data("sx3")
+data("x2")
 
 \dontrun{
 
 ### estimate "VVV" "EVE"
-ax = stpcm(sx3, G=1:3, mnames=c("VVV","EVE"), start=0)
+ax = pcm(sx3, G=1:3, mnames=c("VVV","EVE"), start=0)
 summary(ax)
-ax
 
-
-### estimate all 14 covariance structures 
-ax = stpcm(sx3, G=1:3, mnames=NULL, start=0)
-summary(ax)
-ax
-
-### model based classification
-sx3.label = c(rep(1,1000),rep(2,1000))
-plot(sx3, col=sx3.label)
-axl = stpcm(sx3, G=2, mnames=c("VVV", "EVE"), label=sx3.label)
-summary(axl)
+print(ax)
 
 }
 

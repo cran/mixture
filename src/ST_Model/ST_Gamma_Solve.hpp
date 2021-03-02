@@ -15,10 +15,10 @@ using boost::math::tools::eps_tolerance; // Binary functor for specified number 
 
 #pragma once
 template <class T>
-struct gamma_solve_functor
+struct st_gamma_solve_functor
 {
   // Functor returning both 1st and 2nd derivatives.
-  gamma_solve_functor(T const& to_find_root_of) : eta(to_find_root_of)
+  st_gamma_solve_functor(T const& to_find_root_of) : eta(to_find_root_of)
   { // Constructor stores value a to find root of, for example:
     // calling cbrt_functor_2deriv<T>(x) to get cube root of x,
   }
@@ -36,7 +36,7 @@ private:
 
 #pragma once
 template <class T>
-T gamma_solve(T x,T guess, T min_in)
+T st_gamma_solve(T x,T guess, T min_in)
 {
   // return gamma solve using 1st and 2nd derivatives and Halley.
   //using namespace std;  // Help ADL of std functions.
@@ -49,6 +49,6 @@ T gamma_solve(T x,T guess, T min_in)
   int get_digits = static_cast<int>(digits * 0.4);    // Accuracy triples with each step, so stop when just
                                                       // over one third of the digits are correct.
   boost::uintmax_t maxit = 40;
-  T result = halley_iterate(gamma_solve_functor<T>(x), guess, min, max, get_digits, maxit);
+  T result = halley_iterate(st_gamma_solve_functor<T>(x), guess, min, max, get_digits, maxit);
   return result;
 }

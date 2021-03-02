@@ -1,85 +1,66 @@
-// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; indent-tabs-mode: nil; -*-
-#define ARMA_USE_LAPACK
-#define ARMA_USE_BLAS
-#define ARMA_HAVE_STD_ISFINITE
-#define ARMA_HAVE_STD_ISINF
-#define ARMA_HAVE_STD_ISNAN
-#define ARMA_HAVE_STD_SNPRINTF
-#define ARMA_DONT_PRINT_ERRORS
 
 
-
-// we only include RcppArmadillo.h which pulls Rcpp.h in for us
-#include "RcppArmadillo.h"
-#define NDEBUG 1
-#include <Rcpp.h> 
-#include "VG_Model/VG_Mixture_Model.h"
-#include <gsl/gsl_errno.h>
-
-// [[Rcpp::depends(RcppArmadillo)]]
-// [[Rcpp::depends(RcppGSL)]]
-// [[Rcpp::depends(BH)]]    
 
 
 // create model function, generates a model pointer and returns it as a general mixture_model pointer
-VG_Mixture_Model* vg_create_model(arma::mat* Xp,int G, int model_id, int model_type)
+GH_Mixture_Model* gh_create_model(arma::mat* Xp,int G, int model_id, int model_type)
 {
  switch(model_type)
  {
    case 0: {
-      VG_EII* m = new VG_EII(Xp, G, model_id);
+      GH_EII* m = new GH_EII(Xp, G, model_id);
       return m;
    }
    case 1:{
-      VG_VII* m = new VG_VII(Xp, G, model_id);
+      GH_VII* m = new GH_VII(Xp, G, model_id);
       return m;
    }
    case 2:{
-      VG_EEI* m = new VG_EEI(Xp, G, model_id); 
+      GH_EEI* m = new GH_EEI(Xp, G, model_id); 
       return m;
    }
    case 3:{
-      VG_EVI* m = new VG_EVI(Xp,G,model_id);
+      GH_EVI* m = new GH_EVI(Xp,G,model_id);
      return m; 
    }
    case 4:{
-      VG_VEI* m = new VG_VEI(Xp,G,model_id); 
+      GH_VEI* m = new GH_VEI(Xp,G,model_id); 
       return m; 
    }
    case 5:{
-      VG_VVI* m = new VG_VVI(Xp,G,model_id); 
+      GH_VVI* m = new GH_VVI(Xp,G,model_id); 
       return m; 
    }
    case 6:{
-      VG_EEE* m = new VG_EEE(Xp,G,model_id); 
+      GH_EEE* m = new GH_EEE(Xp,G,model_id); 
       return m; 
    }
    case 7:{
-      VG_VEE* m = new VG_VEE(Xp, G, model_id); 
+      GH_VEE* m = new GH_VEE(Xp, G, model_id); 
       return m; 
    }
    case 8:{
-      VG_EVE* m = new VG_EVE(Xp,G,model_id); 
+      GH_EVE* m = new GH_EVE(Xp,G,model_id); 
       return m; 
    }
    case 9:{
-      VG_EEV* m = new VG_EEV(Xp,G,model_id); 
+      GH_EEV* m = new GH_EEV(Xp,G,model_id); 
       return m; 
    }
    case 10:{
-      VG_VVE* m = new VG_VVE(Xp,G,model_id); 
+      GH_VVE* m = new GH_VVE(Xp,G,model_id); 
       return m; 
    }
    case 11:{
-      VG_EVV* m = new VG_EVV(Xp,G, model_id); 
+      GH_EVV* m = new GH_EVV(Xp,G, model_id); 
       return m; 
    }
    case 12:{
-      VG_VEV* m = new VG_VEV(Xp, G, model_id); 
+      GH_VEV* m = new GH_VEV(Xp, G, model_id); 
       return m; 
    }
    default:{ 
-      VG_VVV* m = new VG_VVV(Xp, G, model_id);
+      GH_VVV* m = new GH_VVV(Xp, G, model_id);
       return m;
    }
  }
@@ -88,7 +69,7 @@ VG_Mixture_Model* vg_create_model(arma::mat* Xp,int G, int model_id, int model_t
 // WRAPPERS 
 
 // [[Rcpp::export]]
-Rcpp::List main_loop_vg(arma::mat X, // data 
+Rcpp::List main_loop_gh(arma::mat X, // data 
                      int G, int model_id, // number of groups and model id (id is for parrallel use)
                      int model_type,  // covariance model type
                      arma::mat in_zigs, // group memberships from initialization 
@@ -101,16 +82,23 @@ Rcpp::List main_loop_vg(arma::mat X, // data
                      )
 {
   
+  bool stochastic_check = false; 
+  // for stochastic variant
+  if (19 < model_type ){
+    model_type -= 20;  
+    stochastic_check = true;     
+  }
   // create mixture model class. 
-  std::unique_ptr<VG_Mixture_Model> m = std::unique_ptr<VG_Mixture_Model>(vg_create_model(&X,G,model_id,model_type));  
+  std::unique_ptr<GH_Mixture_Model> m = std::unique_ptr<GH_Mixture_Model>(gh_create_model(&X,G,model_id,model_type));  
+  
+  m->set_E_step(stochastic_check); 
 
-  if(std::isnan(in_l_tol)){
+  if(isnan(in_l_tol)){
     m->tol_l = 1e-6;
   }
   else{
     m->tol_l = in_l_tol;
   }
-
   gsl_set_error_handler_off();
 
   // Intialize 
@@ -192,10 +180,10 @@ Rcpp::List main_loop_vg(arma::mat X, // data
       m->M_step_gamma(); 
       m->track_lg_init(); 
 
-      arma::uword nmax = (arma::uword)in_nmax; 
+      size_t nmax = (size_t)in_nmax; 
       bool convergence_check = false; 
       // main EM with extra setp. 
-      for(arma::uword iter = 0; iter < nmax ; iter++)
+      for(size_t iter = 0; iter < nmax ; iter++)
       {
         if(iter < anneals.n_elem)
         {
@@ -285,6 +273,7 @@ Rcpp::List main_loop_vg(arma::mat X, // data
       m->M_step_gamma(); 
       m->track_lg_init(); 
 
+      // burn in
       for(size_t iter = 0; iter < (size_t)t_burn; iter++){
         m->E_step_latent();
         m->M_step_props();
@@ -294,10 +283,10 @@ Rcpp::List main_loop_vg(arma::mat X, // data
         m->M_step_gamma(); 
       }
 
-      arma::uword nmax = (arma::uword)in_nmax; 
+      size_t nmax = (size_t)in_nmax; 
       bool convergence_check = false; 
 
-      for(arma::uword iter = 0; iter < nmax ; iter++)
+      for(size_t iter = 0; iter < nmax ; iter++)
       {
         if(iter < anneals.n_elem)
         {
@@ -323,39 +312,42 @@ Rcpp::List main_loop_vg(arma::mat X, // data
       }
     }
   }
-  catch(const bad_sym_except& e)
+  catch(const std::exception& e)
   {
-    return Rcpp::List::create(Rcpp::Named("Error") = e.error_message); 
-    Rcpp::List ret_val = Rcpp::List::create(Rcpp::Named("X") = m->data,
-                                            Rcpp::Named("mus") = m->mus,
-                                            Rcpp::Named("alphas") = m->alphas, 
-                                            Rcpp::Named("sigs") = m->sigs,
-                                            Rcpp::Named("G") = m->G, 
-                                            Rcpp::Named("gammas") = m->gammas,
-                                            Rcpp::Named("zigs") = m->zi_gs,
-                                            Rcpp::Named("pi_gs") = m->pi_gs,
-                                            Rcpp::Named("n_gs") = m->n_gs,
-                                            Rcpp::Named("log_dets") = m->log_dets,
-                                            Rcpp::Named("logliks") = m->logliks);
-                                            
 
-    
-    return ret_val;
+
+    if(std::string(e.what()).compare("logliklihood was infinite, back to previous step and returned results")){
+      Rcpp::List ret_val = Rcpp::List::create(
+                                          Rcpp::Named("mus") = m->mus,
+                                          Rcpp::Named("alphas") = m->alphas, 
+                                          Rcpp::Named("sigs") = m->sigs,
+                                          Rcpp::Named("G") = m->G, 
+                                          Rcpp::Named("omegas") = m->omegas,
+                                          Rcpp::Named("lambdas") = m->lambdas,
+                                          Rcpp::Named("zigs") = m->zi_gs,
+                                          Rcpp::Named("pi_gs") = m->pi_gs,
+                                          Rcpp::Named("n_gs") = m->n_gs,
+                                          Rcpp::Named("log_dets") = m->log_dets,
+                                          Rcpp::Named("logliks") = m->logliks);
+      return(ret_val);
+    }
+
+    return Rcpp::List::create(Rcpp::Named("Error") = e.what()); 
   }
 
-    Rcpp::List ret_val = Rcpp::List::create(Rcpp::Named("X") = m->data,
+    Rcpp::List ret_val = Rcpp::List::create(
                                             Rcpp::Named("mus") = m->mus, 
                                             Rcpp::Named("alphas") = m->alphas, 
                                             Rcpp::Named("sigs") = m->sigs,
                                             Rcpp::Named("G") = m->G, 
-                                            Rcpp::Named("gammas") = m->gammas,
+                                            Rcpp::Named("omegas") = m->omegas,
+                                            Rcpp::Named("lambdas") = m->lambdas,
                                             Rcpp::Named("zigs") = m->zi_gs,
                                             Rcpp::Named("pi_gs") = m->pi_gs,
                                             Rcpp::Named("n_gs") = m->n_gs,
                                             Rcpp::Named("log_dets") = m->log_dets,
                                             Rcpp::Named("logliks") = m->logliks);
 
-  
   return ret_val;
 }
 
@@ -364,11 +356,8 @@ Rcpp::List main_loop_vg(arma::mat X, // data
 
 
 
-
-
-
 // [[Rcpp::export]]
-Rcpp::List vg_e_step_internal(arma::mat X, // data 
+Rcpp::List gh_e_step_internal(arma::mat X, // data 
                            int G, int model_id, // number of groups and model id (id is for parrallel use)
                            int model_type,  // covariance model type
                            Rcpp::List in_m_obj, // internal object from output
@@ -379,7 +368,8 @@ Rcpp::List vg_e_step_internal(arma::mat X, // data
   std::vector< arma::rowvec > mus_t = in_m_obj["mus"]; 
   std::vector< arma::rowvec > alphas_t = in_m_obj["alphas"]; 
   std::vector< arma::mat > sigs = in_m_obj["sigs"];
-  std::vector<double> gammas = in_m_obj["gammas"];
+  std::vector<double> omegas = in_m_obj["omegas"];
+  std::vector<double> lambdas = in_m_obj["lambdas"];
   std::vector<double> n_gs = in_m_obj["n_gs"];
   std::vector<double> log_dets = in_m_obj["log_dets"];
   arma::rowvec pi_gs_t = in_m_obj["pi_gs"];
@@ -397,15 +387,17 @@ Rcpp::List vg_e_step_internal(arma::mat X, // data
 
   arma::vec pi_gs = (arma::vec)(((arma::mat)pi_gs_t).t()); 
 
+
   // create model and set existing parameters. 
   X = X.t(); 
-  std::unique_ptr<VG_Mixture_Model> m = std::unique_ptr<VG_Mixture_Model>(vg_create_model(&X,G,model_id,model_type));  
+  std::unique_ptr<GH_Mixture_Model> m = std::unique_ptr<GH_Mixture_Model>(gh_create_model(&X,G,model_id,model_type));  
   m->mus = mus;
   m->alphas = alphas;  
   m->sigs = sigs; 
   m->log_dets = log_dets; 
   m->pi_gs = pi_gs; 
-  m->gammas = gammas; 
+  m->omegas = omegas; 
+  m->lambdas = lambdas; 
   m->n_gs = n_gs; 
   m->zi_gs = init_zigs; 
   m->init_missing_tags(); //Additional graphical and num
@@ -413,7 +405,7 @@ Rcpp::List vg_e_step_internal(arma::mat X, // data
   // invert symmetric matrices. 
   for(int g = 0; g < G; g++)
   {
-    m->inv_sigs[g] = arma::solve(sigs[g],m->EYE); 
+    m->inv_sigs[g] = arma::inv_sympd(sigs[g]); 
   }
 
   // perform e_step and imputation. 
@@ -427,6 +419,26 @@ Rcpp::List vg_e_step_internal(arma::mat X, // data
   
   return ret_val;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

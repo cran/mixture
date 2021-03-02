@@ -8,7 +8,7 @@ vgpcm(data=NULL, G=1:3, mnames=NULL,
 		start=2, label=NULL, 
 		veo=FALSE, da=c(1.0),
 		nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5,
-		pprogress=FALSE, pwarning=FALSE) 
+		pprogress=FALSE, pwarning=FALSE, stochastic = FALSE) 
 }
 \arguments{
   \item{data}{
@@ -57,6 +57,9 @@ A matrix or data frame such that rows correspond to observations and columns cor
   \item{pwarning}{
 	If \code{TRUE} print the warnings.
 }
+ \item{stochastic}{
+	If \code{TRUE} , it will run stochastic E step variant. 
+}
 }
 \details{
 The data \code{x} are either clustered or classified using Variance Gamma mixture models with some or all of the 14 parsimonious covariance structures described in Celeux & Govaert (1995). The algorithms given by Celeux & Govaert (1995) is used for 12 of the 14 models; the "EVE" and "VVE" models use the algorithms given in Browne & McNicholas (2014). Starting values are very important to the successful operation of these algorithms and so care must be taken in the interpretation of results. 
@@ -95,7 +98,6 @@ All classes contain an internal list called \code{model_obj} or \code{model_objs
 \item{mus}{A vector of location vectors for each group}
 \item{alphas}{A vector containg skewness vectors for each group}
 \item{gammas}{A vector containing estimated gamma parameters for each group}
-\item{X}{Imputed dataset (if original had NAs)}
 }
 \note{
 Dedicated \code{print}, \code{plot} and \code{summary} functions are available for objects of class \code{vgpcm}.

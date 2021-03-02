@@ -70,11 +70,11 @@ else
    AC_MSG_ERROR([gsl-config not found, is GSL installed?])
 fi
 
-
-
 # Now substitute these variables in src/Makevars.in to create src/Makevars
 AC_SUBST(GSL_CFLAGS) 
 AC_SUBST(GSL_LIBS)
 AC_SUBST(OPENMP_CXXFLAGS)
 AC_CONFIG_FILES([src/Makevars])
 AC_OUTPUT
+
+

@@ -1,13 +1,13 @@
-\name{main_loop_st}
-\alias{main_loop_st}
-\title{STPCM Internal C++ Call}
+\name{main_loop_t}
+\alias{main_loop_t}
+\title{TPCM Internal C++ Call}
 \description{
 This function is the internal C++ function call within the \code{stpcm} function. 
 This is a raw C++ function call,  meaning it has no checks for proper inputs so it may fail to run without giving proper errors. 
 Please ensure all arguements are valid. \code{main_loop_st} is useful for writing parallizations of the stpcm function. All arguement descriptions are given in terms of their corresponding C++ types.   
 }
 \usage{
-main_loop_st(X, G, model_id, 
+main_loop_t(X, G, model_id, 
         model_type, in_zigs, 
         in_nmax, in_l_tol, in_m_iter_max,
         in_m_tol, anneals, t_burn = 5L) 
@@ -58,7 +58,6 @@ A matrix or data frame such that rows correspond to observations and columns cor
 \item{G}{An integer representing the number of groups.}
 \item{sigs}{A vector of covariance matrices for each group (note you may have to reshape this)} 
 \item{mus}{A vector of locational vectors for each group}
-\item{alphas}{A vector of skewness vectors for each group}
 \item{vgs}{Gamma parameters for each group}
 }
 \author{
@@ -71,20 +70,18 @@ McNicholas, P.D. (2016), \emph{Mixture Model-Based Classification}. Boca Raton: 
 
 Browne, R.P. and McNicholas, P.D. (2014). Estimating common principal components in high dimensions. \emph{Advances in Data Analysis and Classification} \bold{8}(2), 217-226.
 
-Wei, Y., Tang, Y. and McNicholas, P.D. (2019), 'Mixtures of generalized hyperbolic distributions and mixtures of skew-t distributions for model-based clustering with incomplete data', Computational Statistics and Data Analysis 130, 18-41.
-
-Zhou, H. and Lange, K. (2010). On the bumpy road to the dominant mode. \emph{Scandinavian Journal of Statistics} \bold{37}, 612-631. 
-
 Celeux, G., Govaert, G. (1995). Gaussian parsimonious clustering models. \emph{Pattern Recognition} \bold{28}(5), 781-793.
+
+Andrews, J.L. and McNicholas, P.D. (2012), 'Model-based clustering, classification, and discriminant analysis via mixtures of multivariate t-distributions', Statistics and Computing 22(5), 1021-1029.
 }
 \examples{
 \dontrun{
 
-data("sx2")
-data_in = as.matrix(sx2,ncol = 2)
+data("x2")
+data_in = as.matrix(x2,ncol = 2)
 n_iter = 300
 
-in_g = 2
+in_g = 3
 n = dim(data_in)[1]
 model_string <- "VEI"
 in_model_type <- switch(model_string, "EII" = 0,"VII" = 1,  
@@ -94,8 +91,8 @@ in_model_type <- switch(model_string, "EII" = 0,"VII" = 1,
 
 zigs_in <- z_ig_random_soft(n,in_g)
 
-m2 = main_loop_st(X = t(data_in), # data in has to be in column major form
-               G = 2, # number of groups
+m2 = main_loop_t(X = data_in, 
+               G = 3, # number of groups
                model_id = 1, # model id for parallelization later
                model_type = in_model_type,
                in_zigs = zigs_in, # initializaiton
@@ -105,7 +102,7 @@ m2 = main_loop_st(X = t(data_in), # data in has to be in column major form
                anneals=c(1),
                in_m_tol = 1e-8) 
 
-plot(sx2,col = MAP(m2$zigs) + 1, cex = 0.5, pch = 20)
+plot(x2,col = MAP(m2$zigs) + 1, cex = 0.5, pch = 20)
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
