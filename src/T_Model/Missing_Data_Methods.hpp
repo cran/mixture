@@ -69,13 +69,16 @@ void T_Mixture_Model::EM_burn(int in_burn_steps)
 {
   // copy dataset and z_igs. 
   arma::mat* orig_data = new arma::mat(n,p); // create empty arma mat on the heap. 
-  arma::mat* orig_zi_gs = new arma::mat(n,G); 
+  arma::mat* orig_zi_gs = new arma::mat(n,G);
+  arma::vec* orig_semi_labels = new arma::vec(n,arma::fill::zeros);  
   *orig_data = data; // set orig_data. 
   *orig_zi_gs = zi_gs; // set zi_igs. 
+  *orig_semi_labels = semi_labels; 
 
   // remove all data, and zi_gs with missing values. 
   data.shed_rows(row_tags); 
   zi_gs.shed_rows(row_tags); 
+  semi_labels.shed_rows(row_tags); 
  
   n = data.n_rows; 
   
@@ -102,7 +105,11 @@ void T_Mixture_Model::EM_burn(int in_burn_steps)
   // Now replace back the original data points and zi_igs. only keep the parmaeters.   
   data = *orig_data; 
   zi_gs = *orig_zi_gs; // done EM burn 
-  
+  semi_labels = *orig_semi_labels; 
+
+  delete orig_data; 
+  delete orig_zi_gs; 
+  delete orig_semi_labels;
 }
 
 

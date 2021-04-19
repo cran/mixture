@@ -130,7 +130,10 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
       
       # check to see if number of parameters exceed observations. 
       if(check_veo){
-        
+
+        model_id <- model_to_id(model_name)
+        model_id_stochastic_check <- model_id
+
         if(G_i > 1){
           # set up intialization matrix depending on choice. 
           in_zigs <- switch(startobject,
@@ -141,6 +144,15 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
           
           # handle labels within z_ig matrix.  
           if(!is.null(label)){
+
+            model_id_stochastic_check <- 2
+            
+
+						if(stochastic)
+						{
+							stop('Under current version, you cannot have semi-supervision and stochastic EM')
+						}
+
             # start observation count
             i <- 1
             # go through the entire label system 
@@ -149,7 +161,7 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
               if(label_i != 0){
                 # create vector of zeros and put a 1 based on the label i 
                 classif_vector <- rep(0,G_i) # rep 0. 
-                classif_vector[label_i] <- 1 # put one 
+                classif_vector[label_i] <- 5 # put one 
                 in_zigs[i,] <- classif_vector # replace
               }
               i <- i + 1
@@ -160,10 +172,9 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
           in_zigs <- as.matrix(rep(1.0,n))
         }
         # GET MODEL ID 
-        model_id <- model_to_id(model_name)
         # RUN MODEL 
         model_results_i <- main_loop_st(X = t(data),
-                                        G = G_i, in_zigs = in_zigs, model_id = model_id,
+                                        G = G_i, in_zigs = in_zigs, model_id = model_id_stochastic_check,
                                         model_type = model_id + stochastic*20, in_nmax = nmax, in_l_tol = atol,
                                         in_m_iter_max = mmax, in_m_tol = mtol, anneals = da,
                                         t_burn = burn)

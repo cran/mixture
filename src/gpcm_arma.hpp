@@ -54,7 +54,6 @@ public:
     virtual ~Mixture_Model();
 
     // General Methods
-    double calculate_log_liklihood(void); // returns log
     double mahalanobis(arma::rowvec x, arma::rowvec mu, arma::mat inv_sig);  // calculates mh for specific term. 
     double log_density(arma::rowvec x, arma::rowvec mu, arma::mat inv_Sig, double log_det); // calculates a particular log-density for a specific group for a specific x 
 
@@ -62,11 +61,24 @@ public:
     // stochastic methods
     void SE_step(void); // performs the stochastic estep .
     void RE_step(void);  
-    void (Mixture_Model::*e_step)(void); 
 
-    void set_E_step(bool stochastic){
-        if(stochastic){
+    void SEMI_step(void); 
+    arma::vec semi_labels; // for semi-supervised learning. 
+    double calculate_log_liklihood_std(void); 
+    double calculate_log_liklihood_semi(void); 
+    double calculate_log_liklihood(void){
+      return (this->*calculate_log_liklihood_hidden)(); 
+    }
+    void (Mixture_Model::*e_step)(void); 
+    double (Mixture_Model::*calculate_log_liklihood_hidden)(void); 
+
+    void set_E_step(int stochastic){
+        if(stochastic == 1){
             this->e_step = &Mixture_Model::SE_step; 
+        }
+        if(stochastic == 2){
+            this->e_step = &Mixture_Model::SEMI_step; 
+            this->calculate_log_liklihood_hidden = &Mixture_Model::calculate_log_liklihood_semi; 
         }
         else{
             // e_step is already regular. 
@@ -427,7 +439,9 @@ Mixture_Model::Mixture_Model(arma::mat* in_data, int in_G, int in_model_id)
   logliks = vect; 
   tol_l = 1e-6;
   EYE = arma::eye(p,p); 
-  e_step = &Mixture_Model::RE_step; 
+  e_step = &Mixture_Model::RE_step;
+  semi_labels = arma::vec(n,arma::fill::zeros); 
+  calculate_log_liklihood_hidden = &Mixture_Model::calculate_log_liklihood_std; 
 }
 
 
@@ -541,11 +555,10 @@ double Mixture_Model::log_density(arma::rowvec x, arma::rowvec mu, arma::mat inv
 }
 
 
-double Mixture_Model::calculate_log_liklihood(void)
+double Mixture_Model::calculate_log_liklihood_std(void)
 {
   // n x G matrix for holding densities 
 
-  arma::vec row_sums = arma::vec(n,arma::fill::zeros); 
   double log_lik = 0.0;
   double row_sum_term = 0.0; 
 
@@ -562,6 +575,44 @@ double Mixture_Model::calculate_log_liklihood(void)
 
   return log_lik; 
 }
+
+
+double Mixture_Model::calculate_log_liklihood_semi(void)
+{
+
+  double log_lik = 0.0;
+  double row_sum_term = 0.0; 
+
+  for(int i = 0; i < n; i++)
+  {
+
+    if(semi_labels.at(i) == 0) { 
+
+      row_sum_term = 0.0; 
+      for(int g = 0; g < G; g++)
+      {
+        row_sum_term += pi_gs[g]*std::exp(log_density(data.row(i),mus[g],inv_sigs[g],log_dets[g]));
+      }
+      row_sum_term = std::log(row_sum_term); 
+      log_lik += row_sum_term;
+    
+    }
+    else {
+
+      row_sum_term = 0.0; 
+      for(int g = 0; g < G; g++){
+        row_sum_term += zi_gs.at(i,g)*( log(pi_gs.at(g)) + log_density(data.row(i),mus[g],inv_sigs[g],log_dets[g]) ); 
+      }
+
+      log_lik += row_sum_term; 
+    }
+
+  }
+
+  return log_lik; 
+
+}
+
 
 #pragma once 
 void Mixture_Model::E_step(){
@@ -729,6 +780,84 @@ void Mixture_Model::SE_step(void) // performs the stochastic estep .
   zi_gs = inter_zigs; 
 
 }
+
+void Mixture_Model::SEMI_step(void)
+{
+  
+  // set up inter_mediate step for z_igs. 
+  arma::mat inter_zigs = arma::mat(n,G,arma::fill::zeros); 
+
+  // intermediate values 
+  arma::rowvec inter_density = arma::rowvec(G,arma::fill::zeros); 
+  double inter_row_sum; 
+
+  // calculate density proportions 
+  for(int i = 0; i < n; i++) 
+  { 
+
+    if( semi_labels.at(i) == 0) {
+      // clear row sum for every observation 
+      inter_row_sum = 0;
+      inter_density = arma::rowvec(G,arma::fill::zeros); 
+
+      for(int g = 0; g < G; g ++)
+      {
+        // numerator in e step term for mixture models
+        
+        inter_density[g] = std::pow((pi_gs[g])*std::exp(log_density(data.row(i),mus[g], inv_sigs[g],log_dets[g])),nu);
+        inter_row_sum += inter_density[g]; 
+      }
+        // after calculating inter_density assign the row to the z_ig matrix. 
+      for(int g = 0; g < G; g ++)
+      {
+        
+        double numer_g = inter_row_sum - inter_density[g]; 
+        double denom_g = inter_density[g]; 
+
+        inter_zigs.at(i,g) = 1.0/(1 + numer_g/denom_g);
+
+      }
+
+      double ss = arma::sum(inter_zigs.row(i));
+      
+      if(isnan(ss)){
+        inter_zigs.row(i) = zi_gs.row(i);
+        ss = arma::sum(inter_zigs.row(i));
+      }
+
+      // make sure that it adds up to one
+      int count = 0;
+      while(true) {
+
+        if(comparison_gp(ss,1.0)){ 
+          break; 
+        } 
+        double push_sum = 0.0; 
+
+        for(int gv = 0; gv < (G-1); gv++){
+          push_sum += inter_zigs.row(i)[gv]; 
+        }
+        
+        inter_zigs.row(i)[G-1] = 1.0 - push_sum; 
+        ss = inter_zigs.row(i)[G-1] + push_sum;
+
+        if(count == 10){
+          
+          inter_zigs.row(i) = zi_gs.row(i); // reset to last a posterori
+          // loggy(zi_gs.row(i) space  i );
+          break; 
+        }
+        count ++ ;
+      }
+    }
+    else {
+      inter_zigs.at(i,semi_labels.at(i) - 1) = 1; 
+    }
+  }
+
+  zi_gs = inter_zigs; 
+}
+
 
 
 // Debug functions
@@ -1774,12 +1903,16 @@ void Mixture_Model::EM_burn(int in_burn_steps)
   // copy dataset and z_igs. 
   arma::mat* orig_data = new arma::mat(n,p); // create empty arma mat on the heap. 
   arma::mat* orig_zi_gs = new arma::mat(n,G); 
+  arma::vec* orig_semi_labels = new arma::vec(n); 
+
   *orig_data = data; // set orig_data. 
   *orig_zi_gs = zi_gs; // set zi_igs. 
+  *orig_semi_labels = semi_labels; 
 
   // remove all data, and zi_gs with missing values. 
   data.shed_rows(row_tags); 
   zi_gs.shed_rows(row_tags); 
+  semi_labels.shed_rows(row_tags); 
  
   n = data.n_rows; 
   
@@ -1802,7 +1935,11 @@ void Mixture_Model::EM_burn(int in_burn_steps)
   // Now replace back the original data points and zi_igs. only keep the parmaeters.   
   data = *orig_data; 
   zi_gs = *orig_zi_gs; // done EM burn 
-  
+  semi_labels = *orig_semi_labels; 
+
+  delete orig_data; 
+  delete orig_zi_gs; 
+  delete orig_semi_labels;
 }
 
 
@@ -1966,14 +2103,28 @@ Rcpp::List main_loop(arma::mat X, // data
 {
   
 
-  bool stochastic_check = false; 
+  int stochastic_check = 0; 
   // for stochastic variant
   if (19 < model_type ){
     model_type -= 20;  
-    stochastic_check = true;     
+    stochastic_check = 1;     
   }
   // create mixture model class. 
   std::unique_ptr<Mixture_Model> m = std::unique_ptr<Mixture_Model>(create_model(&X,G,model_id,model_type));  
+
+  if( model_id == 2){
+    stochastic_check = 2; 
+    // reconstruct the label vector on this side and use it as a guide.
+    int k = 0;  
+    for(int i = 0; i < m->n; i++){
+            for( k = 0; k < G; k++){
+              if(in_zigs.at(i,k) == 5){
+                m->semi_labels.at(i) = k + 1;
+                in_zigs.at(i,k) = 1.0; 
+              }
+            }
+    }
+  }
 
   m->set_E_step(stochastic_check); 
 

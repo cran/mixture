@@ -67,7 +67,6 @@ class VG_Mixture_Model
         
         // General Methods
         void random_soft_init(void); // self explanitory  
-        double calculate_log_liklihood(void); // calcuates the logliklihood function over all 
         void M_step_alphas(void); // calsculate alpha_gs under infinite logliklihood problem. 
 
 
@@ -95,18 +94,34 @@ class VG_Mixture_Model
         void E_step(); // performs the e-step calculation on the T_Mixture_Model, stores data in z_igs. 
         // stochastic methods
         void SE_step(void); // performs the stochastic estep .
-        void RE_step(void);  
-        void (VG_Mixture_Model::*e_step)(void); 
+        void RE_step(void);
 
-        void set_E_step(bool stochastic){
-            if(stochastic){
+        // semi-supervised learning. 
+        void SEMI_step(void); 
+        arma::vec semi_labels; // for semi-supervised learning. 
+        double calculate_log_liklihood_std(void); 
+        double calculate_log_liklihood_semi(void); 
+        double calculate_log_liklihood(void){
+          return (this->*calculate_log_liklihood_hidden)(); 
+        }
+        void (VG_Mixture_Model::*e_step)(void); 
+        double (VG_Mixture_Model::*calculate_log_liklihood_hidden)(void); 
+
+        void set_E_step(int stochastic){
+            if(stochastic == 1){
                 this->e_step = &VG_Mixture_Model::SE_step; 
+            }
+            if(stochastic == 2){
+                this->e_step = &VG_Mixture_Model::SEMI_step; 
+                this->calculate_log_liklihood_hidden = &VG_Mixture_Model::calculate_log_liklihood_semi; 
             }
             else{
                 // e_step is already regular. 
             }
         };
-                void M_step_props(); // calculate the proportions and n_gs
+
+
+        void M_step_props(); // calculate the proportions and n_gs
         void M_step_init_gaussian(void); // initializes mu, sig, and alphas according to gaussian settings. alpha is really small.  
         double k_bessel(double nu, double x); 
         double LG_k_bessel(double nu, double x);
@@ -287,6 +302,8 @@ VG_Mixture_Model::VG_Mixture_Model(arma::mat* in_data, int in_G, int model_id ){
     nu_d = 1.0; 
     EYE = arma::eye(p,p); 
     e_step = &VG_Mixture_Model::RE_step; 
+    calculate_log_liklihood_hidden = &VG_Mixture_Model::calculate_log_liklihood_std;
+    semi_labels = arma::vec(n,arma::fill::zeros); 
 }
 
 
@@ -515,10 +532,49 @@ double VG_Mixture_Model::log_density(arma::vec x, // vector comes in as 1 x p
 
 }
 
+double VG_Mixture_Model::calculate_log_liklihood_semi(void) {
+
+  double lglik = 0.0;
+  double row_sum_term = 0.0; 
+  // go through observations.
+  for(int i = 0; i < n; i++)
+  {
+
+    if(semi_labels.at(i) == 0) { 
+      // go through groups
+      row_sum_term = 0.0; 
+      for(int g = 0; g < G; g++) 
+      {
+        row_sum_term += pi_gs[g]*exp(log_density(data.col(i),mus[g],alphas[g], // parameters and observations
+                            a_is[g].at(i),c_is[g].at(i),b_is[g].at(i), // latent variables
+                            inv_sigs[g],log_dets[g],gammas[g] // other parameters 
+                            )); 
+      } 
+      row_sum_term = std::log(row_sum_term); 
+      lglik += row_sum_term;
+    }
+    else {
+
+      row_sum_term = 0.0; 
+      for(int g = 0; g < G; g++){
+        row_sum_term += zi_gs.at(i,g)*( log(pi_gs.at(g)) +  log_density(data.col(i),mus[g],alphas[g], // parameters and observations
+                            a_is[g].at(i),c_is[g].at(i),b_is[g].at(i), // latent variables
+                            inv_sigs[g],log_dets[g],gammas[g] // other parameters 
+                            )); 
+      }
+
+      lglik += row_sum_term; 
+
+    }
+
+  }
+
+  return lglik; 
+
+}
 
 
-
-double VG_Mixture_Model::calculate_log_liklihood(void) {
+double VG_Mixture_Model::calculate_log_liklihood_std(void) {
 
   double lglik = 0.0;
   double row_sum_term = 0.0; 
@@ -538,7 +594,7 @@ double VG_Mixture_Model::calculate_log_liklihood(void) {
     lglik += row_sum_term; 
   }
 
-  return(lglik); 
+  return lglik; 
 }
 
 
@@ -786,6 +842,93 @@ void VG_Mixture_Model::RE_step()
   }
   zi_gs = inter_zigs; 
 }
+
+
+
+void VG_Mixture_Model::SEMI_step(void)
+{
+  
+  // set up inter_mediate step for z_igs. 
+  arma::mat inter_zigs = arma::mat(n,G,arma::fill::zeros); 
+
+  // intermediate values 
+  arma::rowvec inter_density = arma::rowvec(G,arma::fill::zeros); 
+  double inter_row_sum; 
+
+  // calculate density proportions 
+  for(int i = 0; i < n; i++) 
+  { 
+
+    if( semi_labels.at(i) == 0) {
+      // clear row sum for every observation 
+      inter_row_sum = 0;
+      inter_density = arma::rowvec(G,arma::fill::zeros); 
+
+      for(int g = 0; g < G; g ++)
+      {
+        // numerator in e step term for mixture models
+        
+        inter_density[g] = std::pow((pi_gs[g])*std::exp(log_density(data.col(i),mus[g],alphas[g], // basic parameters
+                                                        a_is[g][i],c_is[g][i],b_is[g][i], // latent parameters
+                                                        inv_sigs[g],log_dets[g],gammas[g])),nu);
+        inter_row_sum += inter_density[g]; 
+      }
+        // after calculating inter_density assign the row to the z_ig matrix. 
+      for(int g = 0; g < G; g ++)
+      {
+        
+        double numer_g = inter_row_sum - inter_density[g]; 
+        double denom_g = inter_density[g]; 
+
+        inter_zigs.at(i,g) = 1.0/(1 + numer_g/denom_g);
+
+      }
+
+      double ss = arma::sum(inter_zigs.row(i));
+      
+      if(isnan(ss)){
+        inter_zigs.row(i) = zi_gs.row(i);
+        ss = arma::sum(inter_zigs.row(i));
+      }
+
+      // make sure that it adds up to one
+      int count = 0;
+      while(true) {
+
+        if(comparison_gp(ss,1.0)){ 
+          break; 
+        } 
+        double push_sum = 0.0; 
+
+        for(int gv = 0; gv < (G-1); gv++){
+          push_sum += inter_zigs.row(i)[gv]; 
+        }
+        
+        inter_zigs.row(i)[G-1] = 1.0 - push_sum; 
+        ss = inter_zigs.row(i)[G-1] + push_sum;
+
+        if(count == 10){
+          
+          inter_zigs.row(i) = zi_gs.row(i); // reset to last a posterori
+          // loggy(zi_gs.row(i) space  i );
+          break; 
+        }
+        count ++ ;
+      }
+    }
+    else {
+      inter_zigs.at(i,semi_labels.at(i) - 1) = 1; 
+    }
+  }
+
+  zi_gs = inter_zigs; 
+}
+
+
+
+
+
+
 
 
 

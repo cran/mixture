@@ -32,6 +32,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 	if (!is.numeric(data)) stop('The data is required to be numeric')
 	if (nrow(data) == 1) stop('nrow(data) is equal to 1')
 	if (ncol(data) == 1) stop('ncol(data) is equal to 1; This function currently only works with multivariate data p > 1')
+	
 	# check for full NAs vector. as mixture version 1.6+ can handle missing data.  
 	apply(data,1,checkNA)
 
@@ -148,6 +149,9 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 
 			# check to see if number of parameters exceed observations. 
 			if(check_veo){
+				# get model_type 
+				model_id <- model_to_id(model_name)
+				model_id_stochastic_check <- model_id
 
 				if(G_i > 1){
 					# set up intialization matrix depending on choice. 
@@ -156,9 +160,16 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 					"random_hard"=z_ig_random_hard(n,G_i),
 					"kmeans"=z_ig_kmeans(data,G_i),
 					"matrix"=start)
-
+				
 					# handle labels within z_ig matrix.  
 					if(!is.null(label)){
+						model_id_stochastic_check <- 2
+
+						if(stochastic)
+						{
+							stop('Under current version, you cannot have semi-supervision and stochastic EM')
+						}
+						
 						# start observation count
 						i <- 1
 						# go through the entire label system 
@@ -167,7 +178,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 							if(label_i != 0){
 								# create vector of zeros and put a 1 based on the label i 
 								classif_vector <- rep(0,G_i) # rep 0. 
-								classif_vector[label_i] <- 1 # put one 
+								classif_vector[label_i] <- 5 # put five
 								in_zigs[i,] <- classif_vector # replace
 							}
 							i <- i + 1
@@ -177,12 +188,10 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 				else{
 					in_zigs <- as.matrix(rep(1.0,n))
 				}
-				# get model_type 
-				model_id <- model_to_id(model_name)
 
 				# run model with settings 
 				model_results_i <- main_loop(X=data, G=G_i, in_zigs=in_zigs,# dataset G_i, z_igs
-										model_id=model_id, model_type=model_id + 20*stochastic, # for all intensive purposes these are the same. (They will change later)
+										model_id=model_id_stochastic_check, model_type=model_id + 20*stochastic, # for all intensive purposes these are the same. (They will change later)
 										in_nmax=nmax, in_l_tol=atol, # em number of iterations 
 										in_m_iter_max=mmax,in_m_tol=mtol, # m_step matrix iterations and convergence settings 
 										anneals=da,t_burn=burn) # annealing and burn in settings. 

@@ -89,7 +89,6 @@ public:
     virtual ~T_Mixture_Model();
 
     // General Methods
-    double calculate_log_liklihood(void); // returns log
     double mahalanobis(arma::rowvec x, arma::rowvec mu, arma::mat inv_sig);  // calculates mh for specific term. 
     double log_density(arma::rowvec x, arma::rowvec mu, arma::mat inv_Sig, double log_det, double vg); // calculates a particular log-density for a specific group for a specific x 
     
@@ -97,17 +96,31 @@ public:
     // stochastic methods
     void SE_step(void); // performs the stochastic estep .
     void RE_step(void);  
-    void (T_Mixture_Model::*e_step)(void); 
 
-    void set_E_step(bool stochastic){
-        if(stochastic){
+    // semi supervised methods. 
+     void SEMI_step(void); 
+    arma::vec semi_labels; // for semi-supervised learning. 
+    double calculate_log_liklihood_std(void); 
+    double calculate_log_liklihood_semi(void); 
+    double calculate_log_liklihood(void){
+      return (this->*calculate_log_liklihood_hidden)(); 
+    }
+
+    void (T_Mixture_Model::*e_step)(void); 
+    double (T_Mixture_Model::*calculate_log_liklihood_hidden)(void); 
+ 
+    void set_E_step(int stochastic){
+        if(stochastic == 1){
             this->e_step = &T_Mixture_Model::SE_step; 
+        }
+        if(stochastic == 2){
+            this->e_step = &T_Mixture_Model::SEMI_step; 
+            this->calculate_log_liklihood_hidden = &T_Mixture_Model::calculate_log_liklihood_semi; 
         }
         else{
             // e_step is already regular. 
         }
     };
-
 
     // t distribution 
     std::vector<double> vgs; 

@@ -70,6 +70,8 @@ T_Mixture_Model::T_Mixture_Model(arma::mat* in_data, int in_G, int in_model_id)
   tol_l = 1e-6;
   e_step = &T_Mixture_Model::RE_step; 
   m_step_vgs = &T_Mixture_Model::M_step_vgs_regular; 
+  calculate_log_liklihood_hidden = &T_Mixture_Model::calculate_log_liklihood_std; 
+  semi_labels = arma::vec(n,arma::fill::zeros); 
 
 }
 
@@ -182,11 +184,10 @@ double T_Mixture_Model::log_density(arma::rowvec x, arma::rowvec mu, arma::mat i
 }
 
 #pragma once
-double T_Mixture_Model::calculate_log_liklihood(void)
+double T_Mixture_Model::calculate_log_liklihood_std(void)
 {
   // n x G matrix for holding densities 
 
-  arma::vec row_sums = arma::vec(n,arma::fill::zeros); 
   double log_lik = 0.0;
   double row_sum_term = 0.0; 
 
@@ -203,6 +204,40 @@ double T_Mixture_Model::calculate_log_liklihood(void)
 
   return log_lik; 
 }
+
+#pragma once
+double T_Mixture_Model::calculate_log_liklihood_semi(void)
+{
+  // n x G matrix for holding densities 
+
+  double log_lik = 0.0;
+  double row_sum_term = 0.0; 
+
+  for(int i = 0; i < n; i++)
+  {
+    if(semi_labels.at(i) == 0){
+      row_sum_term = 0.0; 
+      for(int g = 0; g < G; g++)
+      {
+        row_sum_term += pi_gs[g]*std::exp(log_density(data.row(i),mus[g],inv_sigs[g],log_dets[g],vgs[g]));
+      }
+      row_sum_term = std::log(row_sum_term); 
+      log_lik += row_sum_term; 
+    }
+    else {
+      row_sum_term = 0.0; 
+      for(int g = 0; g < G; g++){
+        row_sum_term += zi_gs.at(i,g)*( log(pi_gs.at(g)) + log_density(data.row(i),mus[g],inv_sigs[g],log_dets[g],vgs[g]) ); 
+      }
+      log_lik += row_sum_term; 
+    }
+  }
+
+  return log_lik; 
+}
+
+
+
 
 #pragma once 
 void T_Mixture_Model::E_step(){
@@ -368,6 +403,90 @@ void T_Mixture_Model::SE_step(void) // performs the stochastic estep .
   zi_gs = inter_zigs; 
 
 }
+
+
+void T_Mixture_Model::SEMI_step(void)
+{
+  
+  // set up inter_mediate step for z_igs. 
+  arma::mat inter_zigs = arma::mat(n,G,arma::fill::zeros); 
+
+  // intermediate values 
+  arma::rowvec inter_density = arma::rowvec(G,arma::fill::zeros); 
+  double inter_row_sum; 
+
+  // calculate density proportions 
+  for(int i = 0; i < n; i++) 
+  { 
+
+    if( semi_labels.at(i) == 0) {
+      // clear row sum for every observation 
+      inter_row_sum = 0;
+      inter_density = arma::rowvec(G,arma::fill::zeros); 
+
+      for(int g = 0; g < G; g ++)
+      {
+        // numerator in e step term for mixture models
+        
+        inter_density[g] = std::pow((pi_gs[g])*std::exp(log_density(data.row(i),mus[g], inv_sigs[g],log_dets[g],vgs[g])),nu);
+        inter_row_sum += inter_density[g]; 
+      }
+        // after calculating inter_density assign the row to the z_ig matrix. 
+      for(int g = 0; g < G; g ++)
+      {
+        
+        double numer_g = inter_row_sum - inter_density[g]; 
+        double denom_g = inter_density[g]; 
+
+        inter_zigs.at(i,g) = 1.0/(1 + numer_g/denom_g);
+
+      }
+
+      double ss = arma::sum(inter_zigs.row(i));
+      
+      if(isnan(ss)){
+        inter_zigs.row(i) = zi_gs.row(i);
+        ss = arma::sum(inter_zigs.row(i));
+      }
+
+      // make sure that it adds up to one
+      int count = 0;
+      while(true) {
+
+        if(comparison_gp(ss,1.0)){ 
+          break; 
+        } 
+        double push_sum = 0.0; 
+
+        for(int gv = 0; gv < (G-1); gv++){
+          push_sum += inter_zigs.row(i)[gv]; 
+        }
+        
+        inter_zigs.row(i)[G-1] = 1.0 - push_sum; 
+        ss = inter_zigs.row(i)[G-1] + push_sum;
+
+        if(count == 10){
+          
+          inter_zigs.row(i) = zi_gs.row(i); // reset to last a posterori
+          // loggy(zi_gs.row(i) space  i );
+          break; 
+        }
+        count ++ ;
+      }
+    }
+    else {
+      inter_zigs.at(i,semi_labels.at(i) - 1) = 1; 
+    }
+  }
+
+  zi_gs = inter_zigs; 
+}
+
+
+
+
+
+
 
 // GENERAL E - Step for wgs
 #pragma once

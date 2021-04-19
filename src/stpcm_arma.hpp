@@ -80,15 +80,31 @@ Rcpp::List main_loop_st(arma::mat X, // data
                      )
 {
   
-  bool stochastic_check = false; 
+  int stochastic_check = 0; 
   // for stochastic variant
   if (19 < model_type ){
     model_type -= 20;  
-    stochastic_check = true;     
+    stochastic_check = 1;     
   }
 
   // create mixture model class. 
   std::unique_ptr<ST_Mixture_Model> m = std::unique_ptr<ST_Mixture_Model>(st_create_model(&X,G,model_id,model_type));  
+
+
+  if( model_id == 2){
+    stochastic_check = 2; 
+    // reconstruct the label vector on this side and use it as a guide.
+    int k = 0;  
+    for(int i = 0; i < m->n; i++){
+            for( k = 0; k < G; k++){
+              if(in_zigs.at(i,k) == 5){
+                m->semi_labels.at(i) = k + 1;
+                in_zigs.at(i,k) = 1.0; 
+              }
+            }
+    }
+  }
+
 
   m->set_E_step(stochastic_check); 
 
@@ -316,7 +332,7 @@ Rcpp::List main_loop_st(arma::mat X, // data
   {
 
 
-    if( std::string(e.what()).compare("logliklihood was infinite, back to previous step and returned results")){
+    if(0 == std::string(e.what()).compare("logliklihood was infinite, back to previous step and returned results")){
     Rcpp::List ret_val = Rcpp::List::create(
                                             Rcpp::Named("mus") = m->mus, 
                                             Rcpp::Named("alphas") = m->alphas, 
