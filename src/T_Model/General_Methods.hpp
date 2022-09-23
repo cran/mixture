@@ -178,7 +178,7 @@ double T_Mixture_Model::log_density(arma::rowvec x, arma::rowvec mu, arma::mat i
   // compute the log of gamma and other terms. 
   double numerator_term = boost::math::lgamma(vg_term) - 0.5*log_det; 
   // denominator term of t distribution. 
-  double denominator_term = - 0.5*p*std::log(M_PI*vg) - boost::math::lgamma(0.5*vg) - vg_term*std::log(1 + mahalanobis(x,mu,inv_Sig)/vg);
+  double denominator_term = - 0.5*p*std::log(M_PI*vg) - boost::math::lgamma(0.5*vg) - vg_term*std::log(1.0 + mahalanobis(x,mu,inv_Sig)/vg);
 
   return(numerator_term + denominator_term);
 }
@@ -276,7 +276,7 @@ void T_Mixture_Model::RE_step()
       double numer_g = inter_row_sum - inter_density[g]; 
       double denom_g = inter_density[g]; 
 
-      inter_zigs.at(i,g) = 1.0/(1 + numer_g/denom_g);
+      inter_zigs.at(i,g) = 1.0/(1.0 + numer_g/denom_g);
 
     }
 
@@ -350,7 +350,7 @@ void T_Mixture_Model::SE_step(void) // performs the stochastic estep .
       double numer_g = inter_row_sum - inter_density[g]; 
       double denom_g = inter_density[g]; 
 
-      inter_zigs.at(i,g) = 1.0/(1 + numer_g/denom_g);
+      inter_zigs.at(i,g) = 1.0/(1.0 + numer_g/denom_g);
 
     }
 
@@ -438,7 +438,7 @@ void T_Mixture_Model::SEMI_step(void)
         double numer_g = inter_row_sum - inter_density[g]; 
         double denom_g = inter_density[g]; 
 
-        inter_zigs.at(i,g) = 1.0/(1 + numer_g/denom_g);
+        inter_zigs.at(i,g) = 1.0/(1.0 + numer_g/denom_g);
 
       }
 

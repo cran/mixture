@@ -4,7 +4,8 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
                   start=2, label=NULL, # starting inputs , start = 0: random soft, start = 2, random hard. start = 3 mkmeans. 
                   veo=FALSE, da=c(1.0), # veo (variables exceed observations), da is deterministic annealing  
                   nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5, # convergence settings for matrix and loglik
-                  pprogress=FALSE, pwarning=FALSE, stochastic = FALSE)  # progress settings 
+                  pprogress=FALSE, pwarning=FALSE, stochastic = FALSE,
+                  latent_method = "standard")  # progress settings 
 {
   
   # Do some sanity checks. 
@@ -74,10 +75,18 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
     if ( any(is.na(data)) ) { stop("You cannot use kmeans on missing values, try soft initialization first, then after a kmeans start.") }
     startobject <- "kmeans"
   } 
+  else if (start > 2) {
+		startobject <- "multi"
+	}
   else{
     stop("start setting is not valid")
   }
-  
+
+  # handle latent methods. 
+  if( !( latent_method %in% c("random", "standard") ) )
+  {
+    stop("latent method is invalid, can only be either random, or standard")
+  }
   
   # deterministic annealing sanity checks
   if(any(is.na(da))){ stop("deterministic annealing should contain no NAs") } # check NAs
@@ -140,7 +149,8 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
                             "random_soft"=z_ig_random_soft(n,G_i),
                             "random_hard"=z_ig_random_hard(n,G_i),
                             "kmeans"=z_ig_kmeans(data,G_i),
-                            "matrix"=start)
+                            "matrix"=start,
+                            "multi"=z_ig_random_soft(n, G_i))
           
           # handle labels within z_ig matrix.  
           if(!is.null(label)){
@@ -171,13 +181,69 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
         else{
           in_zigs <- as.matrix(rep(1.0,n))
         }
-        # GET MODEL ID 
+
+				# Handle multiple starts 
+        if(startobject == "multi" && G_i > 1){
+      
+          # RUN first model. 
+          model_results_i <- main_loop_st(X = t(data),
+                                          G = G_i, in_zigs = in_zigs, model_id = model_id_stochastic_check,
+                                          model_type = model_id + stochastic*20, in_nmax = nmax, in_l_tol = atol,
+                                          in_m_iter_max = mmax, in_m_tol = mtol, anneals = da,
+                                          t_burn = burn, latent_step = latent_method)
+
+          # handle errors just in case. 
+					if(!is.null(model_results_i$Error)){
+						best_loglik <- -Inf 
+						best_z_start <- z_ig_random_soft(n, G_i)
+					}
+					else{
+						best_loglik <- tail(model_results_i$logliks, 1) 
+						best_z_start <- model_results_i$zigs
+					}
+
+
+					# attempt multiple starts. 
+					for(i in 2:start){
+
+            # RUN REST OF THE MODELS. 
+            model_results_i <- main_loop_st(X = t(data),
+                                            G = G_i, in_zigs = in_zigs, model_id = model_id_stochastic_check,
+                                            model_type = model_id + stochastic*20, in_nmax = nmax, in_l_tol = atol,
+                                            in_m_iter_max = mmax, in_m_tol = mtol, anneals = da,
+                                            t_burn = burn, latent_step = latent_method)
+
+						# handle errors. 
+						if(!is.null(model_results_i$Error)){
+							current_loglik <- -Inf 
+							current_z_start <- z_ig_random_soft(n, G_i)
+						}
+						else{
+							current_loglik <- tail(model_results_i$logliks, 1) 
+							current_z_start <- model_results_i$zigs
+						}
+
+						# check if the start was better. 
+						if(current_loglik > best_loglik){
+							best_loglik <- current_loglik
+							best_z_start <- current_z_start
+						}
+
+          }
+
+          # give a good start. 
+					in_zigs <- as.matrix(best_z_start)
+
+        }
+
         # RUN MODEL 
         model_results_i <- main_loop_st(X = t(data),
                                         G = G_i, in_zigs = in_zigs, model_id = model_id_stochastic_check,
                                         model_type = model_id + stochastic*20, in_nmax = nmax, in_l_tol = atol,
                                         in_m_iter_max = mmax, in_m_tol = mtol, anneals = da,
-                                        t_burn = burn)
+                                        t_burn = burn, latent_step = latent_method)
+
+
         status <- "Failed Aitken's Convergence Criterion"
         if (nmax > length(model_results_i$logliks)) {
           status <- "Converged according to Aitken's Convergence Criterion"
@@ -209,6 +275,10 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
     }
     
   }
+
+  if(start > 2){
+		startobject <- paste(start, "random soft initializations.")
+	} 
   
   info_matrix <- list(startobject=startobject, # gives starting object information. 
                       info_loglik=info_loglik,info_npar=info_npar,info_BIC=info_BIC, # logliks, params, BICs, 
@@ -237,8 +307,6 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 
 	info_matrix$gpar <- gpar
 	info_matrix$z <- info_matrix$best_model$model_obj[[1]]$zigs
-
-
 
 
   class(info_matrix) <- "stpcm"

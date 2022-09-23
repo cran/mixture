@@ -11,6 +11,7 @@
 #include <gsl/gsl_sf_result.h> 
 #include "ST_Gamma_Solve.hpp"
 #include "../Cluster_Error.hpp"
+#include "../Random_GIG.hpp"
 
 
 
@@ -47,10 +48,6 @@ class ST_Mixture_Model
         arma::mat data; // data for the model
         arma::vec pi_gs; // mixing proportions
         arma::mat zi_gs; // posteriori
-        arma::mat prev_zi_gs;  // previous a-posterori
-        std::vector< double > prev_abar_gs; // previous latent variables
-        std::vector< double > prev_bbar_gs; // previous latent variables
-        std::vector< double > prev_cbar_gs; // previous latent variables
         std::vector< arma::mat > Ws; // within cluster scattering matrix per cluster
         std::vector< double > logliks; // std vector containing logliklihoods for each iteration.
         size_t log_iter_max = 1000;
@@ -66,6 +63,38 @@ class ST_Mixture_Model
         std::vector< double > abar_gs; //
         std::vector< double > bbar_gs; //  
         std::vector< double > cbar_gs; // 
+
+
+
+        // tracking previous statements. 
+        arma::mat prev_zi_gs;  // previous a-posterori
+        std::vector<double> prev_n_gs;
+        std::vector< double > prev_abar_gs; // previous latent variables
+        std::vector< double > prev_bbar_gs; // previous latent variables
+        std::vector< double > prev_cbar_gs; // previous latent variables
+        std::vector<double> prev_log_dets; // log determinants. 
+        std::vector< arma::vec > prev_mus; // all mixture models have location vectors
+        std::vector< arma::vec > prev_alphas; // skewness vectors. 
+        std::vector< arma::mat > prev_sigs; // all mixture models have covariance matrices
+        std::vector< arma::mat > prev_inv_sigs; // inverse of all sigs
+        std::vector< arma::vec > prev_a_is; // expectation of latent parameter 
+        std::vector< arma::vec > prev_b_is;  // expectation of lg of y 
+        std::vector< arma::vec > prev_c_is; // expectation of inverse of y
+        std::vector< double > prev_vs;  // gig variables. 
+        std::vector< arma::mat > prev_Ws; // within cluster scattering matrix per cluster
+
+        // stability functions. 
+        arma::mat adjust_tol(arma::mat & A);
+        void check_decreasing_loglik(void); 
+        void check_decreasing_loglik(arma::uword * iter, arma::uword nmax);  
+
+
+        void set_previous_state(void); 
+        void overwrite_previous_state(void);
+        double best_loglik; 
+        double current_loglik; 
+
+
         
         // General Methods
         void random_soft_init(void); // self explanitory  
@@ -97,6 +126,10 @@ class ST_Mixture_Model
         // stochastic methods
         void SE_step(void); // performs the stochastic estep .
         void RE_step(void);  
+
+        // latent methods. 
+        void RE_step_latent(void);
+        void SE_step_latent(void);
 
         // semi-supervised learning. 
         void SEMI_step(void); 
@@ -130,7 +163,12 @@ class ST_Mixture_Model
 
 
         // ST EStep for y , log(y) and 1/y  
-        void E_step_latent(void); 
+        void (ST_Mixture_Model::*e_step_latent)(void); // void pointer function. super dangerous unless you're a wizard. 
+
+        void E_step_latent(void) {
+          (this->*e_step_latent)(); 
+        }
+
         void M_step_mus(void); // calculates the m step for mean vector
 
         // ST gamma update step 
@@ -187,6 +225,157 @@ class ST_Mixture_Model
 
 
 
+
+#pragma once 
+void ST_Mixture_Model::set_previous_state(void){
+
+  
+  prev_mus = mus; 
+  prev_alphas = alphas; 
+  prev_sigs = sigs; 
+  prev_inv_sigs = inv_sigs; 
+  prev_vs = vs; 
+  prev_Ws = Ws; 
+  prev_log_dets = log_dets; 
+  prev_zi_gs = zi_gs;
+  prev_a_is = a_is; 
+  prev_b_is = b_is; 
+  prev_c_is = c_is; 
+
+}
+
+
+
+#pragma once 
+void ST_Mixture_Model::overwrite_previous_state(void){
+
+  mus = prev_mus; 
+  alphas = prev_alphas; 
+  sigs = prev_sigs; 
+  inv_sigs = prev_inv_sigs; 
+  vs = prev_vs; 
+  Ws = prev_Ws; 
+  log_dets = prev_log_dets; 
+  zi_gs = prev_zi_gs; 
+  a_is = prev_a_is; 
+  b_is = prev_b_is; 
+  c_is = prev_c_is; 
+
+}
+
+
+
+#pragma once 
+void ST_Mixture_Model::check_decreasing_loglik(void){
+  
+  current_loglik = calculate_log_liklihood();
+
+  if (current_loglik < best_loglik){
+    // loggy("Entered decreasing logliklihood, attempting to escape"); 
+
+    for(int b = 0; b < 100; b++){
+      // std::cout << "L[" << b << "]: "  << current_loglik << " Best: " << best_loglik  << std::endl; 
+
+      SE_step(); 
+      M_step_props();
+      E_step_latent();
+      M_step_mus();
+      M_step_Ws(); 
+      m_step_sigs(); 
+      M_step_gamma(); 
+
+      current_loglik = calculate_log_liklihood();
+      if(current_loglik > best_loglik) {
+        // loggy("Escaped!"); 
+        return;
+      }
+
+    }
+
+    overwrite_previous_state(); 
+
+  
+  }
+  else{
+    best_loglik = current_loglik; 
+  }
+
+}
+
+
+
+#pragma once
+void ST_Mixture_Model::check_decreasing_loglik(arma::uword * iter, arma::uword nmax){
+
+  current_loglik = calculate_log_liklihood();
+
+  if (current_loglik < best_loglik){
+    // loggy("Entered decreasing logliklihood, attempting to escape"); 
+
+    for(int b = 0; b < 50; b++){
+
+      E_step(); 
+      M_step_props();
+      E_step_latent();
+      M_step_mus();
+      M_step_Ws(); 
+      m_step_sigs(); 
+      M_step_gamma(); 
+
+      current_loglik = calculate_log_liklihood();
+      if(current_loglik > best_loglik) {
+        // loggy("Escaped!"); 
+        return;
+      }
+
+      *iter = *iter + 1; 
+      if (*iter >= nmax) {
+        *iter = nmax; 
+        break; 
+      }
+    }
+    overwrite_previous_state(); 
+  }
+  else{
+    best_loglik = current_loglik; 
+  }
+}
+
+
+
+
+
+
+
+#pragma once 
+arma::mat ST_Mixture_Model::adjust_tol(arma::mat & A){
+
+  double l_min; // minimum
+
+  int p = A.n_cols; 
+  arma::colvec eigens; // eigen values placeholder
+  arma::mat L; // eigen vectors  
+  arma::eig_sym(eigens, L, A);
+  l_min = arma::min(eigens); 
+
+  double shift_mag = 1e-6; 
+
+  if(abs(l_min) < 1e-8){
+    // loggy("Small E-value: " << l_min); 
+
+    shift_mag += abs(l_min); 
+    arma::vec v_shift = arma::vec(p, arma::fill::ones) * shift_mag; 
+    arma::mat m_shift = arma::diagmat(v_shift);
+    A = A + m_shift; 
+  }
+
+  return A; 
+}
+
+
+
+
+
 bool comparison_st(double a, double b){
     double tolerance  = abs( a - b);
     bool result = tolerance < eps;
@@ -194,57 +383,7 @@ bool comparison_st(double a, double b){
 }
 
 double ST_Mixture_Model::LG_k_bessel(double nu, double x){
-
-
-  // set up safety net for this function. 
-  gsl_sf_result result;
-  int status;    
-  
-  status = gsl_sf_bessel_lnKnu_e(nu,abs(x), &result );
-    
-    if(isnan(result.val)){
-      status = 1; 
-    }
-
-  if(status == 0){
-
-      return(result.val); 
-
-  } else {
-    // try scaled version 
-    status = gsl_sf_bessel_Knu_scaled_e(nu, abs(x), & result); 
-    
-    if(isnan(result.val)){
-      status = 1; 
-    }
-
-    if(status == 0) {
-      return( log(result.val/exp(abs(x))) );
-
-    } else {
-      double approx_result = 0.0;
-
-      try{ 
-
-          approx_result = 0.5*(log(M_PI)  - log(2.0) - log(nu) ) - nu*log(M_E*x) + nu*log(2.0*nu); 
-        
-          if(isnan(approx_result)){
-            // overflow has occured. 
-            return (log(1e-100));
-          }
-
-          return(approx_result);
-      }
-      catch(...) {
-        // if all else fails just return 1.0 
-          return (log(1e-100));
-      }
-
-    }
-
-  }
-
-  return (log(1e-100)); 
+  return ( log( R::bessel_k(abs(x), nu, 2.0) ) - abs(x) ); 
 }
 
 
@@ -304,7 +443,8 @@ ST_Mixture_Model::ST_Mixture_Model(arma::mat* in_data, int in_G, int model_id ){
     tol_l = 1e-6;
     nu_d = 1.0; 
     EYE = arma::eye(p,p); 
-    e_step = &ST_Mixture_Model::RE_step; 
+    e_step = &ST_Mixture_Model::RE_step;
+    e_step_latent = &ST_Mixture_Model::RE_step_latent; 
     semi_labels = arma::vec(n,arma::fill::zeros); 
     calculate_log_liklihood_hidden = &ST_Mixture_Model::calculate_log_liklihood_std; 
 }
@@ -374,6 +514,7 @@ void ST_Mixture_Model::track_lg_init(void)
   // get log_densities and set the first one This is a simple function and should be done after the first intialization
   //arma::rowvec model_lgs = log_densities(); 
   logliks[0] = calculate_log_liklihood();  //sum(model_lgs);
+  best_loglik = logliks[0]; 
 }
 
 // This function keeps track of the log liklihood. You have to calculate the log densities, then keep track of their progress. 
@@ -521,10 +662,10 @@ double ST_Mixture_Model::log_density(arma::vec x, // vector comes in as 1 x p
 
 
   double bess_input = sqrt( (delta + v_g)*(rho));
-  double leading_terms = - (p/2.0)*log(2.0*M_PI) - 0.5*log_det + 0.5*v_g*log(v_g) - (v_g/2 - 1)*log(2.0) - boost::math::lgamma(v_g/2);  //
+  double leading_terms = - (p/2.0)*log(2.0*M_PI) - 0.5*log_det + 0.5*v_g*log(v_g) - (v_g/2.0 - 1.0)*log(2.0) - boost::math::lgamma(v_g/2.0);  //
   double middle_terms = arma::trace(inv_Sig*(x-mu)*alpha.t());
   double third_term = (nu/2.0)*( log(delta + v_g) - log(rho));
-  double bessel_term = LG_k_bessel(abs(nu),bess_input);
+  double bessel_term = LG_k_bessel(nu,bess_input);
 
   if( isnan(bessel_term)){
     bessel_term = log(1e-10);
@@ -938,10 +1079,11 @@ void ST_Mixture_Model::SEMI_step(void)
 
 
 
-
-// LATENT E STEP 
-void ST_Mixture_Model::E_step_latent(void)
+// STANDARD LATENT E STEP 
+void ST_Mixture_Model::RE_step_latent(void)
 {
+
+  // Rcpp::Rcout << "Hit standard step \n"; 
 
   int g, i;  
 
@@ -969,10 +1111,10 @@ void ST_Mixture_Model::E_step_latent(void)
       const double product_terms = sqrt((vs[g] + delta)*(rho)); 
 
       // loggy(gammas[g]);
-      const double nu = -vs[g]/2 - p/2; 
+      const double nu = -vs[g]/2.0 - p/2.0; 
 
-      const double K_dfp1_prod = LG_k_bessel(abs(nu+1),product_terms); 
-      const double K_df_prod = LG_k_bessel(abs(nu),product_terms);
+      const double K_dfp1_prod = LG_k_bessel(nu+1,product_terms); 
+      const double K_df_prod = LG_k_bessel(nu,product_terms);
   
       // calculate a_is.
       double y_ig = exp(0.5*(log(vs[g] + delta) - log(rho)) + K_dfp1_prod - K_df_prod);  
@@ -988,7 +1130,7 @@ void ST_Mixture_Model::E_step_latent(void)
          b_is[g].at(i) = b_current; 
       }
 
-      double bprime = (LG_k_bessel(abs(nu+eps),abs(product_terms)) - LG_k_bessel(abs(nu),abs(product_terms)))/eps ;
+      double bprime = (LG_k_bessel(nu+eps, product_terms) - LG_k_bessel(nu, product_terms))/eps ;
 
       double log_y_ig = 0.5*(log(vs[g] + delta) - log(rho)) + bprime;   
 
@@ -1012,6 +1154,92 @@ void ST_Mixture_Model::E_step_latent(void)
 
   }
 }
+
+
+// random LATENT E STEP 
+void ST_Mixture_Model::SE_step_latent(void)
+{
+
+  int g, i;  
+
+  double a_bar_g, b_bar_g, c_bar_g; 
+
+  for(g = 0; g < G; g++){
+
+    a_bar_g = 0.0;
+    b_bar_g = 0.0; 
+    c_bar_g = 0.0;
+
+    for(i = 0; i < n; i++){
+
+      // calculate a_is and other terms! 
+      const arma::vec x = data.col(i); 
+      arma::vec xm = (x - mus[g]);
+
+      const double delta = arma::trace(inv_sigs[g]*xm*xm.t());  
+      double alpha_term = arma::trace(inv_sigs[g]*alphas[g]*alphas[g].t()); 
+      const double rho = (alpha_term);
+      const double nu = -vs[g]/2.0 - p/2.0; 
+
+      double y_ig = random_gig_draw(nu, vs[g] + delta, rho); 
+
+      if(y_ig == -1.0){
+        // Rcpp::Rcout << "failed random step \n"; 
+
+        const double product_terms = sqrt((vs[g] + delta)*(rho)); 
+        const double K_dfp1_prod = LG_k_bessel(nu+1,product_terms); 
+        const double K_df_prod = LG_k_bessel(nu,product_terms);
+      
+        // calculate a_is.
+        y_ig = exp(0.5*(log(vs[g] + delta) - log(rho)) + K_dfp1_prod - K_df_prod);  
+
+        if(y_ig < 1.0e20) { a_is[g].at(i) = y_ig; }
+      
+        double inv_y_ig = 0.5*(log(rho) - log(vs[g] + delta)) +  K_dfp1_prod - K_df_prod;
+        double b_current = exp(inv_y_ig) - 2.0*(nu)/(vs[g] + delta);
+
+        if(b_current < 1.0e20){ b_is[g].at(i) = b_current;}
+
+        double bprime = (LG_k_bessel(nu+eps, product_terms) - LG_k_bessel( nu, product_terms))/eps ;
+
+        double log_y_ig = 0.5*(log(vs[g] + delta) - log(rho)) + bprime;   
+
+        if(log_y_ig < 1.0e20) {  c_is[g].at(i) = log_y_ig; }
+
+      } else {
+
+        // Rcpp::Rcout << "Hit random step \n"; 
+
+        if(y_ig < 1.0e20){ a_is[g].at(i) = y_ig; }
+
+        double b_current = 1.0/y_ig; 
+
+        if(b_current < 1.0e20){ b_is[g].at(i) = b_current; }
+
+        double log_y_ig = log(y_ig); 
+
+        if(log_y_ig < 1.0e20) { c_is[g].at(i) = log_y_ig; }
+
+      }
+      
+    }
+
+    a_bar_g  = arma::sum(zi_gs.col(g) % a_is.at(g)); 
+    b_bar_g = arma::sum(zi_gs.col(g) % b_is.at(g));
+    c_bar_g = arma::sum(zi_gs.col(g) % c_is.at(g));
+
+    a_bar_g = a_bar_g/n_gs[g]; 
+    b_bar_g = b_bar_g/n_gs[g]; 
+    c_bar_g = c_bar_g/n_gs[g]; 
+
+    abar_gs[g] = a_bar_g;
+    bbar_gs[g] = b_bar_g;
+    cbar_gs[g] = c_bar_g; 
+
+  }
+}
+
+
 
 
 // function under infinite liklihood problem. 
@@ -1090,15 +1318,26 @@ void ST_Mixture_Model::M_step_Ws(void) {
     const arma::vec mu_g = mus.at(g); 
 
     // flurry matrix calculation 
+    arma::vec xbar_g = arma::vec(p,arma::fill::zeros); 
 
     for(int i = 0; i < n; i++)
     {
       const arma::vec xm = data.col(i) - mu_g; 
-      W_g +=  zi_gs.at(i,g)*( bs.at(i)*xm*xm.t() - xm*alpha_g.t() - alpha_g*xm.t() +  as.at(i)*alpha_g*alpha_g.t() ); 
+      xbar_g += zi_gs.at(i,g) * data.col(i); 
+      W_g +=  zi_gs.at(i,g)*( bs.at(i)*xm*xm.t());//- 2.0 * alpha_g*xm.t() +  as.at(i)*alpha_g*alpha_g.t() ); 
     
     }
 
-    Ws.at(g) = W_g/n_gs[g]; // I divide by n_gs here for simplicity, this is similar to the cov.wt R, 
+    xbar_g /= n_gs[g]; 
+    // std::cout << "W_g" << std::endl; 
+  
+    W_g = W_g/n_gs[g]; 
+    W_g = adjust_tol(W_g);
+
+    W_g += - alpha_g * (xbar_g - mu_g).t() - (xbar_g - mu_g) * alpha_g.t()  + abar_gs[g] * alpha_g * alpha_g.t();     
+    W_g = adjust_tol(W_g); 
+   
+    Ws.at(g) = W_g; 
     // do not confuse this statement with the true flury matrix.  
   }
 
@@ -1302,15 +1541,14 @@ void ST_Mixture_Model::M_step_gamma(void) {
     // Rcpp::Rcout << "abar: " << abar_gs[g] << " bbar: " <<  bbar_gs[g] << " cbar: " << cbar_gs[g] << std::endl;    
     const double eta_g = bbar_gs[g] - cbar_gs[g] - 1; 
     try {
-      double gam_g = st_gamma_solve(eta_g,vs[g], 0.1);
+      double gam_g = st_gamma_solve(eta_g,vs[g], 2*eps);
       if(!isnan(gam_g) && !comparison_st(gam_g,20.0)){
         vs[g] = gam_g; 
       }
     } catch(const std::exception& e){
-      // Rcpp::Rcout << "error has occured with gamma solver." << std::endl; 
+      Rcpp::Rcout << "error has occured with gamma solver." << std::endl; 
     }; 
     
-
   }
 
 }

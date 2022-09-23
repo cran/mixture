@@ -27,6 +27,7 @@ A matrix or data frame such that rows correspond to observations and columns cor
 	If \code{0} then the random soft function is used for initialization.
 	If \code{1} then the random hard function is used for initialization.
 	If \code{2} then the kmeans function is used for initialization. 
+	If \code{>2} then multiple random soft starts are used for initialization. 
 	If \code{is.matrix} then matrix is used as an initialization matrix as along as it has non-negative elements. Note: only models with the same number of columns of this matrix will be fit.
 }
 \item{label}{

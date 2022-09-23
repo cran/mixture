@@ -10,7 +10,9 @@ Please ensure all arguements are valid. \code{main_loop_vg} is useful for writin
 main_loop_vg(X, G, model_id, 
         model_type, in_zigs, 
         in_nmax, in_l_tol, in_m_iter_max,
-        in_m_tol, anneals, t_burn = 5L) 
+        in_m_tol, anneals,
+        latent_step="standard", 
+        t_burn = 5L) 
 }
 \arguments{
       \item{X}{
@@ -47,6 +49,9 @@ A matrix or data frame such that rows correspond to observations and columns cor
   }
   \item{t_burn}{
 	  A positive integer representing the number of burn steps if missing data (NAs) are detected. 
+  }
+  \item{latent_step}{
+    	If \code{"standard"}, it will use the standard E step for latent variable of a Normal Variance Mean Mixture, if \code{"random"} it will run a random draw from a GIG distribution.
   }
 }
 \details{

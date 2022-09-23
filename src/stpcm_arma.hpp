@@ -64,6 +64,92 @@ ST_Mixture_Model* st_create_model(arma::mat* Xp,int G, int model_id, int model_t
  }
 }
 
+#pragma once
+void set_model_defaults_st(std::unique_ptr<ST_Mixture_Model> & m, 
+                        int model_type,
+                        int in_m_iter_max,
+                        double in_m_tol )
+{
+  
+  switch (model_type)
+    {
+      case 4:{
+        if(in_m_iter_max != 0){
+          m->set_m_iterations(in_m_iter_max,in_m_tol);
+        }
+        else{
+          m->set_defaults();
+        } 
+        break;    
+      }
+      case 12:{
+        if(in_m_iter_max != 0){
+          m->set_m_iterations(in_m_iter_max,in_m_tol);
+        }
+        else{
+          m->set_defaults();
+        } 
+        break; 
+      }
+      case 7:{
+        if(in_m_iter_max != 0){
+          m->set_m_iterations(in_m_iter_max,in_m_tol);
+        }
+        else{
+          m->set_defaults();
+        } 
+        break; 
+      }
+      case 8:{
+        if(in_m_iter_max != 0){
+          m->set_m_iterations(in_m_iter_max,in_m_tol,arma::mat(m->p,m->p,arma::fill::eye));
+        }
+        else{
+          m->set_defaults();
+        } 
+        break; 
+      }
+      case 10:{
+        if(in_m_iter_max != 0){
+          m->set_m_iterations(in_m_iter_max,in_m_tol,arma::mat(m->p,m->p,arma::fill::eye));
+        }
+        else{
+          m->set_defaults();
+        } 
+      }
+      default:
+        break;
+    }
+
+}
+
+Rcpp::List create_result_list_st(std::unique_ptr<ST_Mixture_Model> & m, bool check_na_)
+/*
+  Creates the return list object that is pushed out to the R from C++. 
+*/
+{
+
+
+  Rcpp::List result_list = Rcpp::List::create(Rcpp::Named("mus") = m->mus, 
+                                          Rcpp::Named("alphas") = m->alphas, 
+                                          Rcpp::Named("sigs") = m->sigs,
+                                          Rcpp::Named("G") = m->G, 
+                                          Rcpp::Named("vs") = m->vs,
+                                          Rcpp::Named("zigs") = m->zi_gs,
+                                          Rcpp::Named("pi_gs") = m->pi_gs,
+                                          Rcpp::Named("n_gs") = m->n_gs,
+                                          Rcpp::Named("log_dets") = m->log_dets,
+                                          Rcpp::Named("logliks") = m->logliks);
+
+  if(check_na_){
+    result_list["X"] = m->data.t(); 
+  }
+
+  return result_list; 
+}
+
+
+
 // WRAPPERS 
 
 // [[Rcpp::export]]
@@ -74,8 +160,9 @@ Rcpp::List main_loop_st(arma::mat X, // data
                      int in_nmax, // iteration max for EM . 
                      double in_l_tol, // liklihood tolerance 
                      int in_m_iter_max, // iteration max for M step for special models 
-                     double in_m_tol, // tolerance for matrix convergence on M step for special mdodels.
-                     arma::vec anneals,
+                     double in_m_tol, // tolerance for matrix convergence on M step for special models.
+                     arma::vec anneals, // for deterministic annealing 
+                     std::string latent_step = "standard", // e step method. 
                      int t_burn = 5// number of burn in steps for NAs if found. 
                      )
 {
@@ -86,10 +173,10 @@ Rcpp::List main_loop_st(arma::mat X, // data
     model_type -= 20;  
     stochastic_check = 1;     
   }
+  
 
   // create mixture model class. 
   std::unique_ptr<ST_Mixture_Model> m = std::unique_ptr<ST_Mixture_Model>(st_create_model(&X,G,model_id,model_type));  
-
 
   if( model_id == 2){
     stochastic_check = 2; 
@@ -108,6 +195,13 @@ Rcpp::List main_loop_st(arma::mat X, // data
 
   m->set_E_step(stochastic_check); 
 
+  // check latent step and assign it. 
+  if(!latent_step.compare("random")){
+    // assign latent step. 
+    // Rcpp::Rcout << "Assigning random latent method. \n" ;
+    m->e_step_latent = &ST_Mixture_Model::SE_step_latent;
+
+  } // in all other cases use a standard sampler. 
 
   if(isnan(in_l_tol)){
     m->tol_l = 1e-6;
@@ -133,56 +227,7 @@ Rcpp::List main_loop_st(arma::mat X, // data
         // perform missing data check and implement algorithm based on check 
     if(NA_check){
 
-      // check to see if model_id is any of the special ones and set defaults, or pass in arguement. 
-      switch (model_type)
-      {
-        case 4:{
-          if(in_m_iter_max != 0){
-            m->set_m_iterations(in_m_iter_max,in_m_tol);
-          }
-          else{
-            m->set_defaults();
-          } 
-          break;    
-        }
-        case 12:{
-          if(in_m_iter_max != 0){
-            m->set_m_iterations(in_m_iter_max,in_m_tol);
-          }
-          else{
-            m->set_defaults();
-          } 
-          break; 
-        }
-        case 7:{
-          if(in_m_iter_max != 0){
-            m->set_m_iterations(in_m_iter_max,in_m_tol);
-          }
-          else{
-            m->set_defaults();
-          } 
-          break; 
-        }
-        case 8:{
-          if(in_m_iter_max != 0){
-            m->set_m_iterations(in_m_iter_max,in_m_tol,arma::mat(m->p,m->p,arma::fill::eye));
-          }
-          else{
-            m->set_defaults();
-          } 
-          break; 
-        }
-        case 10:{
-          if(in_m_iter_max != 0){
-            m->set_m_iterations(in_m_iter_max,in_m_tol,arma::mat(m->p,m->p,arma::fill::eye));
-          }
-          else{
-            m->set_defaults();
-          } 
-        }
-        default:
-          break;
-      }
+      set_model_defaults_st(m, model_type, in_m_iter_max, in_m_tol); 
       // phase 1
       m->EM_burn(t_burn); // defaults already set in here, although I should pull them out. in full function. 
       // phase 2. 
@@ -211,8 +256,8 @@ Rcpp::List main_loop_st(arma::mat X, // data
         }
 
         m->E_step(); 
-        m->E_step_latent();
         m->M_step_props();
+        m->E_step_latent();
         m->impute_cond_mean(); // now have imputation step. 
         m->M_step_mus();
         m->M_step_Ws(); 
@@ -228,76 +273,22 @@ Rcpp::List main_loop_st(arma::mat X, // data
 
     }
     else{
+
+      set_model_defaults_st(m, model_type, in_m_iter_max, in_m_tol); 
+
       // perform intialization of params. 
       m->M_step_props(); 
-      m->M_step_init_gaussian();
-      m->M_step_mus();
-      m->M_step_Ws();
-      
-
-      // check to see if model_id is any of the special ones and set defaults, or pass in arguement. 
-      switch (model_type)
-      {
-        case 4:{
-          if(in_m_iter_max != 0){
-            m->set_m_iterations(in_m_iter_max,in_m_tol);
-          }
-          else{
-            m->set_defaults();
-          } 
-          break;    
-        }
-        case 12:{
-          if(in_m_iter_max != 0){
-            m->set_m_iterations(in_m_iter_max,in_m_tol);
-          }
-          else{
-            m->set_defaults();
-          } 
-          break; 
-        }
-        case 7:{
-          if(in_m_iter_max != 0){
-            m->set_m_iterations(in_m_iter_max,in_m_tol);
-          }
-          else{
-            m->set_defaults();
-          } 
-          break; 
-        }
-        case 8:{
-          if(in_m_iter_max != 0){
-            m->set_m_iterations(in_m_iter_max,in_m_tol,arma::mat(m->p,m->p,arma::fill::eye));
-          }
-          else{
-            m->set_defaults();
-          } 
-          break; 
-        }
-        case 10:{
-          if(in_m_iter_max != 0){
-            m->set_m_iterations(in_m_iter_max,in_m_tol,arma::mat(m->p,m->p,arma::fill::eye));
-          }
-          else{
-            m->set_defaults();
-          } 
-        }
-        default:
-          break;
-      }
-      
-      m->m_step_sigs();
-      m->M_step_gamma(); 
+      m->M_step_init_gaussian(); 
       m->track_lg_init(); 
-
-      for(size_t iter = 0; iter < (size_t)t_burn; iter++){
-        m->E_step_latent();
-        m->M_step_props();
-        m->M_step_mus();
-        m->M_step_Ws(); 
-        m->m_step_sigs(); 
-        m->M_step_gamma(); 
-      }
+      m->E_step(); 
+      m->M_step_props(); 
+      m->E_step_latent();
+      m->M_step_props();
+      m->M_step_mus();
+      m->M_step_Ws(); 
+      m->m_step_sigs(); 
+      m->M_step_gamma();  
+      m->track_lg(false);     
 
       arma::uword nmax = (arma::uword)in_nmax; 
       bool convergence_check = false; 
@@ -311,14 +302,19 @@ Rcpp::List main_loop_st(arma::mat X, // data
         else{
           m->nu = 1.0; 
         }
+        
+        // set the previous state. 
+        m->set_previous_state(); 
 
         m->E_step(); 
+        m->M_step_props(); 
         m->E_step_latent();
-        m->M_step_props();
         m->M_step_mus();
         m->M_step_Ws(); 
         m->m_step_sigs(); 
         m->M_step_gamma(); 
+
+        m->check_decreasing_loglik(&iter, nmax); 
 
         convergence_check = m->track_lg(iter < 5);
         if(convergence_check){
@@ -331,38 +327,20 @@ Rcpp::List main_loop_st(arma::mat X, // data
     catch(const std::exception& e)
   {
 
-
-    if(0 == std::string(e.what()).compare("logliklihood was infinite, back to previous step and returned results")){
-    Rcpp::List ret_val = Rcpp::List::create(
-                                            Rcpp::Named("mus") = m->mus, 
-                                            Rcpp::Named("alphas") = m->alphas, 
-                                            Rcpp::Named("sigs") = m->sigs,
-                                            Rcpp::Named("G") = m->G, 
-                                            Rcpp::Named("vgs") = m->vs,
-                                            Rcpp::Named("zigs") = m->zi_gs,
-                                            Rcpp::Named("pi_gs") = m->pi_gs,
-                                            Rcpp::Named("n_gs") = m->n_gs,
-                                            Rcpp::Named("log_dets") = m->log_dets,
-                                            Rcpp::Named("logliks") = m->logliks);
-      return(ret_val);
+    // Rcpp::Rcout << "Error " << e.what() << " \n"; 
+    // check for bad logliklihood. 
+    if(is_string_comparison(e,"logliklihood was infinite, back to previous step and returned results"))
+    {
+      Rcpp::List ret_val = create_result_list_st(m, NA_check); 
+      return ret_val;
     }
 
     return Rcpp::List::create(Rcpp::Named("Error") = e.what()); 
   }
 
-    Rcpp::List ret_val = Rcpp::List::create(
-                                            Rcpp::Named("mus") = m->mus, 
-                                            Rcpp::Named("alphas") = m->alphas, 
-                                            Rcpp::Named("sigs") = m->sigs,
-                                            Rcpp::Named("G") = m->G, 
-                                            Rcpp::Named("vgs") = m->vs,
-                                            Rcpp::Named("zigs") = m->zi_gs,
-                                            Rcpp::Named("pi_gs") = m->pi_gs,
-                                            Rcpp::Named("n_gs") = m->n_gs,
-                                            Rcpp::Named("log_dets") = m->log_dets,
-                                            Rcpp::Named("logliks") = m->logliks);
-  
-  return ret_val;
+    // create return object and exit c++. 
+    Rcpp::List ret_val = create_result_list_st(m, NA_check); 
+    return ret_val;
 }
 
 

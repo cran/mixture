@@ -13,12 +13,15 @@
 #include <exception> 
 #include <random> 
 #include "../Cluster_Error.hpp"
+#include "Rmath.h"
 
-#define loggy(x) Rcpp::Rcout << x << std::endl 
+// #define loggy(x) Rcpp::Rcout << x << std::endl 
+// #define loggy(x) std::cout << x << std::endl
 #define bessy(nu,x) LG_k_bessel(nu,x)
 #define bessy_prime(nu,x) (bessy(nu+eps,x) - bessy(nu,x))/(eps)
 #define space << " " << 
-const double two_eps = 0.002;
+// const double eps = 1e-6;
+const double two_eps = eps*2.0;
 const double pi_my = 3.1415926535897932;
 
 #pragma once 
@@ -38,6 +41,11 @@ bool comparison(double a, double b);
 
 #pragma omp declare reduction( + : arma::mat : omp_out += omp_in ) \
                  initializer( omp_priv = omp_orig )   
+
+#pragma once 
+double log_bessel_k(double nu, double x); 
+
+
 
 #pragma once
 class GH_Mixture_Model 
@@ -62,10 +70,35 @@ class GH_Mixture_Model
         arma::mat data; // data for the model
         arma::vec pi_gs; // mixing proportions
         arma::mat zi_gs; // posteriori
+
+
+        // tracking previous statements. 
         arma::mat prev_zi_gs;  // previous a-posterori
+        std::vector<double> prev_n_gs;
         std::vector< double > prev_abar_gs; // previous latent variables
         std::vector< double > prev_bbar_gs; // previous latent variables
         std::vector< double > prev_cbar_gs; // previous latent variables
+        std::vector<double> prev_log_dets; // log determinants. 
+        std::vector< arma::vec > prev_mus; // all mixture models have location vectors
+        std::vector< arma::vec > prev_alphas; // skewness vectors. 
+        std::vector< arma::mat > prev_sigs; // all mixture models have covariance matrices
+        std::vector< arma::mat > prev_inv_sigs; // inverse of all sigs
+        std::vector< arma::vec > prev_a_is; // expectation of latent parameter 
+        std::vector< arma::vec > prev_b_is;  // expectation of lg of y 
+        std::vector< arma::vec > prev_c_is; // expectation of inverse of y
+        std::vector< double > prev_omegas;  // gig variables. 
+        std::vector< double > prev_lambdas; 
+        std::vector< arma::mat > prev_Ws; // within cluster scattering matrix per cluster
+
+        void set_previous_state(void); 
+        void overwrite_previous_state(void);
+        double best_loglik; 
+        double current_loglik; 
+        void check_decreasing_loglik(void);
+        void check_decreasing_loglik(size_t * iter, size_t nmax);  
+        arma::mat adjust_tol(arma::mat & A);
+
+
         std::vector< arma::mat > Ws; // within cluster scattering matrix per cluster
         std::vector< double > logliks; // std vector containing logliklihoods for each iteration.
         size_t log_iter_max = 1000;
@@ -203,6 +236,148 @@ class GH_Mixture_Model
 }; 
 
 
+#pragma once 
+void GH_Mixture_Model::check_decreasing_loglik(void){
+  
+  current_loglik = calculate_log_liklihood();
+
+  if (current_loglik < best_loglik){
+    // loggy("Entered decreasing logliklihood, attempting to escape"); 
+
+    for(int b = 0; b < 100; b++){
+
+      E_step(); 
+      M_step_props();
+      E_step_latent();
+      M_step_mus();
+      M_step_Ws(); 
+      m_step_sigs(); 
+      M_step_gamma(); 
+
+      current_loglik = calculate_log_liklihood();
+      if(current_loglik > best_loglik) {
+        // loggy("Escaped!"); 
+        return;
+      }
+
+    }
+
+    overwrite_previous_state(); 
+
+  
+  }
+  else{
+    best_loglik = current_loglik; 
+  }
+
+}
+
+#pragma once
+void GH_Mixture_Model::check_decreasing_loglik(size_t * iter, size_t nmax){
+
+  current_loglik = calculate_log_liklihood();
+
+  if (current_loglik < best_loglik){
+    // loggy("Entered decreasing logliklihood, attempting to escape"); 
+
+    for(int b = 0; b < 50; b++){
+
+      E_step(); 
+      M_step_props();
+      E_step_latent();
+      M_step_mus();
+      M_step_Ws(); 
+      m_step_sigs(); 
+      M_step_gamma(); 
+
+      current_loglik = calculate_log_liklihood();
+      if(current_loglik > best_loglik) {
+        // loggy("Escaped!"); 
+        return;
+      }
+
+      *iter = *iter + 1; 
+      if (*iter >= nmax) {
+        *iter = nmax; 
+        break; 
+      }
+    }
+    overwrite_previous_state(); 
+  }
+  else{
+    best_loglik = current_loglik; 
+  }
+}
+
+
+
+#pragma once 
+arma::mat GH_Mixture_Model::adjust_tol(arma::mat & A){
+
+  double l_min; // minimum
+
+  int p = A.n_cols; 
+  arma::colvec eigens; // eigen values placeholder
+  arma::mat L; // eigen vectors  
+  arma::eig_sym(eigens, L, A);
+  l_min = arma::min(eigens); 
+
+  double shift_mag = 1e-6; 
+
+  if(abs(l_min) < 1e-8){
+    // loggy("Small E-value: " << l_min); 
+
+    shift_mag += abs(l_min); 
+    arma::vec v_shift = arma::vec(p, arma::fill::ones) * shift_mag; 
+    arma::mat m_shift = arma::diagmat(v_shift);
+    A = A + m_shift; 
+  }
+
+  return A; 
+}
+
+
+
+#pragma once 
+void GH_Mixture_Model::set_previous_state(void){
+
+  
+  prev_mus = mus; 
+  prev_alphas = alphas; 
+  prev_sigs = sigs; 
+  prev_inv_sigs = inv_sigs; 
+  prev_omegas = omegas; 
+  prev_lambdas = lambdas; 
+  prev_Ws = Ws; 
+  prev_log_dets = log_dets; 
+  prev_zi_gs = zi_gs;
+  prev_a_is = a_is; 
+  prev_b_is = b_is; 
+  prev_c_is = c_is; 
+
+}
+
+
+
+#pragma once 
+void GH_Mixture_Model::overwrite_previous_state(void){
+
+  mus = prev_mus; 
+  alphas = prev_alphas; 
+  sigs = prev_sigs; 
+  inv_sigs = prev_inv_sigs; 
+  omegas = prev_omegas; 
+  lambdas = prev_lambdas; 
+  Ws = prev_Ws; 
+  log_dets = prev_log_dets; 
+  zi_gs = prev_zi_gs; 
+  a_is = prev_a_is; 
+  b_is = prev_b_is; 
+  c_is = prev_c_is; 
+
+}
+
+
 
 bool comparison(double a, double b){
     double tolerance  = abs( a - b);
@@ -212,57 +387,7 @@ bool comparison(double a, double b){
 
 
 double GH_Mixture_Model::LG_k_bessel(double nu, double x){
-
-
-  // set up safety net for this function. 
-  gsl_sf_result result;
-  int status;    
-  
-  status = gsl_sf_bessel_lnKnu_e(nu,abs(x), &result );
-    
-    if(isnan(result.val)){
-      status = 1; 
-    }
-
-  if(status == 0){
-
-      return(result.val); 
-
-  } else {
-    // try scaled version 
-    status = gsl_sf_bessel_Knu_scaled_e(nu, abs(x), & result); 
-    
-    if(isnan(result.val)){
-      status = 1; 
-    }
-
-    if(status == 0) {
-      return( log(result.val/exp(abs(x))) );
-
-    } else {
-      double approx_result = 0.0;
-
-      try{ 
-
-          approx_result = 0.5*(log(M_PI) - log(2.0) - log(nu) ) - nu*log(M_E*x) + nu*log(2.0*nu); 
-        
-          if(isnan(approx_result)){
-            // overflow has occured. 
-            return (log(1e-100));
-          }
-
-          return(approx_result);
-      }
-      catch(...) {
-        // if all else fails just return 1.0 
-          return (log(1e-100));
-      }
-
-    }
-
-  }
-
-  return (log(1e-100)); 
+  return ( log( R::bessel_k(abs(x), nu, 2.0) ) - abs(x) ); 
 }
 
 
@@ -375,14 +500,20 @@ bool GH_Mixture_Model::check_aitkens(void) {
           infinite_loglik_except e; 
           throw e; 
         }
-        if(l_p1 > l_t){
+        if(l_p1 < l_t){
           loglik_decreasing e;
           throw e; 
         }
         double l_m1 = logliks[last_index-3];
         double a_t = (l_p1 - l_t)/(l_t - l_m1);
+        if(isnan(a_t) || isinf(a_t)){
+          a_t = 0.0; 
+        }
         double l_Inf = l_t + (l_p1 - l_t)/(1.0-a_t);
-        double val = std::abs((l_Inf - l_t));
+        double val = abs((l_Inf - l_t));
+
+
+
         return (bool)(val < tol_l);
 }
 
@@ -394,97 +525,21 @@ void GH_Mixture_Model::track_lg_init(void)
   // get log_densities and set the first one This is a simple function and should be done after the first intialization
   //arma::rowvec model_lgs = log_densities(); 
   logliks[0] = calculate_log_liklihood();  //sum(model_lgs);
+  best_loglik = logliks[0]; 
 }
 
 // This function keeps track of the log liklihood. You have to calculate the log densities, then keep track of their progress. 
 bool GH_Mixture_Model::track_lg(bool check)
 {
-  
+
+  // check if log lik is too early. 
+  logliks.push_back(best_loglik);    
+
   if (check) {
-    logliks.push_back(calculate_log_liklihood());    
     return false; 
   }
-  else {
 
-    double c_loglik = calculate_log_liklihood();
-
-    if( isnan(c_loglik) || isinf(c_loglik) ){
-        
-        if(logliks.size() < 10){
-          infinite_loglik_except e;
-          throw e; 
-        }
-
-        zi_gs = prev_zi_gs; 
-        abar_gs = prev_abar_gs;
-        bbar_gs = prev_bbar_gs;
-        cbar_gs = prev_cbar_gs; 
-
-        M_step_props();
-        M_step_alphas(); // new function to update mus 
-        M_step_Ws(); 
-        m_step_sigs(); 
-        M_step_gamma(); 
-
-        for( size_t i = 0; i < 50; i++) {
-
-          if(check_aitkens() == true){ return true; }
-
-          else 
-          {
-
-            E_step_latent();
-            M_step_props();
-            M_step_alphas(); // new function to update alphas
-            M_step_Ws(); 
-            m_step_sigs(); 
-            M_step_gamma(); 
-
-            c_loglik = calculate_log_liklihood();
-
-            if(isnan(c_loglik) || isinf(c_loglik)){
-              zi_gs = prev_zi_gs; 
-              abar_gs = prev_abar_gs;
-              bbar_gs = prev_bbar_gs;
-              cbar_gs = prev_cbar_gs; 
-              
-              E_step_latent();
-              M_step_props();
-              M_step_alphas(); // new function to update alphas
-              M_step_Ws(); 
-              m_step_sigs(); 
-              M_step_gamma(); 
-              
-              infinite_loglik_with_return_except e; 
-              throw e;
-            }
-            check_aitkens();
-            logliks.push_back(c_loglik);
-
-          }
-
-        }
-
-      return(check_aitkens());
-
-    } else {
-        prev_zi_gs = zi_gs;
-        prev_abar_gs = abar_gs;
-        prev_bbar_gs = bbar_gs; 
-        prev_cbar_gs = cbar_gs;
-        logliks.push_back(c_loglik);
-    }
-
-    //checking aitkens convergence criterion 
-    int last_index = logliks.size();
-    double l_p1 =  logliks[last_index-1];
-    double l_t =  logliks[last_index-2];
-    double l_m1 = logliks[last_index-3];
-    double a_t = (l_p1 - l_t)/(l_t - l_m1);
-    double l_Inf = l_t + (l_p1 - l_t)/(1.0-a_t);
-    double val = std::abs((l_Inf - l_t));
-    return (bool)(val < tol_l); 
-  }
+  return (check_aitkens());
 }
 
 
@@ -498,13 +553,24 @@ double GH_Mixture_Model::mahalanobis(arma::vec x, // vector comes in as 1 x p
 
 	arma::vec xma = (x - mu - alpha*y_s); 
 
-	double res = arma::trace(inv_sig*(xma*xma.t()));  
+	double res = abs(arma::trace(inv_sig*(xma*xma.t())));  
 
   double mh = res*(1.0/y_s);
 
   return (mh); 
 }
 
+#pragma once 
+double quadratic_form(arma::vec v, arma::mat Q){
+  double result = ((arma::mat)(v.t() * Q * v)).at(0,0); 
+  return abs(result); 
+}
+
+#pragma once 
+double quadratic_form_2(arma::vec v, arma::vec v2, arma::mat Q){
+  double result = ((arma::mat)(v.t() * Q * v2)).at(0,0); 
+  return abs(result); 
+}
 
         // log density calculation. 
 double GH_Mixture_Model::log_density(arma::vec x, // vector comes in as 1 x p  
@@ -520,31 +586,44 @@ double GH_Mixture_Model::log_density(arma::vec x, // vector comes in as 1 x p
 {
 
 
-  const double nu = lambda_g - p/2.0;
-  const double rho = arma::trace(inv_Sig*alpha*alpha.t()); 
+  const double nu = lambda_g - ((double)p) * 0.5;
+  const double rho = quadratic_form(alpha, inv_Sig); 
   arma::vec xm = x - mu;
-  double delta = arma::trace(inv_Sig*xm*xm.t());
 
-  if( comparison(delta,0) ){
-    delta = 0.0001;
+  double delta = quadratic_form(xm, inv_Sig);
+
+  // check if delta too small. 
+  if (comparison(delta, 0.0)){
+    delta = 1.0e-7; 
   }
 
   double bess_input = sqrt( (delta + omega_g)*(rho + omega_g) );
-  double leading_terms = - (p/2.0)*log(2.0*M_PI) - 0.5*log_det - LG_k_bessel(abs(lambda_g),omega_g);
-  double middle_terms = arma::trace(inv_Sig*(x-mu)*alpha.t());
-  double third_term = (nu/2.0)*( log(delta + omega_g) - log( rho + omega_g));
-  double bessel_term = LG_k_bessel(abs(nu),bess_input);
+  
 
-  if( isnan(bessel_term)){
-    bessel_term = log(1e-10);
-  }
+  double leading_terms = - ( ((double)p) * 0.5)*log(2.0*M_PI) - 0.5*log_det - log_bessel_k(lambda_g, omega_g); 
+  double middle_terms = quadratic_form_2(alpha, xm, inv_Sig); 
+  double third_term = (nu * 0.5)*( log(delta + omega_g) - log( rho + omega_g));
+  double bessel_term = log_bessel_k(nu,bess_input);
 
   double result = leading_terms + middle_terms +third_term + bessel_term; 
-  
+    // println("nu $(nu) rho $(rho) delta $(delta) bess_input: $(bess_input) leading_terms:  $(leading_terms) middle_terms: $(middle_terms) third_term: $(third_term) bessel_term $(bessel_term) result $(leading_terms + middle_terms +third_term + bessel_term)")
+
+
+  // loggy("nu" space nu space "rho" space rho space "delta" space delta space "bess_input" space bess_input space "leading_terms" space leading_terms space "middle terms" space middle_terms space "third term" space third_term space "bessel_term" space bessel_term space "result" space result); 
+  if(isnan(result) || isinf(result)){
+
+    // loggy("result: " << result << " leading_terms: " << leading_terms << " middle_terms: " << middle_terms << " third_term: " << third_term << " bessel_term: " << bessel_term  ); 
+    // loggy("delta: " << delta <<  " omega_g " << omega_g << " rho  " << rho);
+    // loggy("bess_input: " <<  bess_input);
+    // loggy("nu: " << nu);
+    
+    infinite_loglik_except e; 
+    throw e;
+  }
+
   return(result);
 
 }
-
 
 
 
@@ -671,11 +750,13 @@ void GH_Mixture_Model::M_step_init_gaussian(void) {
     log_dets[g] = log(arma::det(sigs[g]));
 
     // add a tiny amount of skewness just like michael did. 
-    alphas[g] = arma::vec(p,arma::fill::ones)*1; 
+    alphas[g] = arma::vec(p,arma::fill::zeros); 
     // add a large amount for the gamma parameter
-    omegas[g] = 3.0; 
-    lambdas[g] = 3.0; 
+    omegas[g] = 1.0; 
+    lambdas[g] = 1.0; 
   }
+
+  
 
 }
 
@@ -950,56 +1031,44 @@ void GH_Mixture_Model::E_step_latent(void)
 
   double a_bar_g, b_bar_g, c_bar_g; 
 
+  // go through groups. 
   for(g = 0; g < G; g++){
 
-
+    // set means to 0.0
     a_bar_g = 0.0;
     b_bar_g = 0.0; 
     c_bar_g = 0.0;
 
+    // compute the constants across all observations only. 
+    const double nu = lambdas[g] - ((double)p)*0.5; 
+    const double rho = quadratic_form(alphas[g], inv_sigs[g]) + omegas[g]; 
+    const double logrho = log(rho); 
+
+    // go through observations. 
     for(i = 0; i < n; i++){
 
-      // calculate a_is and other terms! 
+      // calculate latent variables 
       const arma::vec x = data.col(i); 
       arma::vec xm = (x - mus[g]);
 
-      const double delta = arma::trace(inv_sigs[g]*xm*xm.t());  
+      const double delta = quadratic_form(xm, inv_sigs[g]) + omegas[g]; 
+      const double product_terms = sqrt(delta * rho); 
 
-      double alpha_term = arma::trace(inv_sigs[g]*alphas[g]*alphas[g].t()); 
+      double logdelta = log(delta); 
 
-      const double rho = (alpha_term);
+      double lgp1 = log_bessel_k(nu, product_terms); 
+      double lgp2 = log_bessel_k(nu + 1.0, product_terms); 
 
-      const double product_terms = sqrt((omegas[g] + delta)*(omegas[g] + rho)); 
+      a_is[g].at(i) = abs(exp(0.5 * ( logdelta - logrho ) + lgp2 - lgp1 ));
+      b_is[g].at(i) = abs(exp( 0.5 * ( logrho - logdelta) + lgp2 - lgp1 ) - 2.0 * nu / delta); 
 
-      // loggy(gammas[g]);
-      const double nu = lambdas[g] - p/2; 
+      lgp2 = log_bessel_k(nu + eps, product_terms); 
+      c_is[g].at(i) = 0.5*(logdelta - logrho) + (lgp2 - lgp1)/eps; 
 
-      const double K_dfp1_prod = LG_k_bessel(abs(nu+1),product_terms); 
-      const double K_df_prod = LG_k_bessel(abs(nu),product_terms);
-  
-      // calculate a_is.
-      double y_ig = exp(0.5*(log(omegas[g] + delta) - log(omegas[g] + rho)) + K_dfp1_prod - K_df_prod);  //log(K_dfp1_prod) - log(K_df_prod); 
+      // loggy( "aig" space a_is[g].at(i) space "big" space b_is[g].at(i) space "cig" space c_is[g].at(i)  );
 
-      if(y_ig < 1.0e20){
-        a_is[g].at(i) = y_ig;
-      }
-
-      double inv_y_ig = 0.5*(log(omegas[g] + rho) - log(omegas[g] + delta)) +  K_dfp1_prod - K_df_prod;// log(K_dfp1_prod) - log(K_df_prod); 
-      double b_current = exp(inv_y_ig) - 2.0*(nu)/(omegas[g] + delta);
-
-      if(b_current < 1.0e20){
-         b_is[g].at(i) = b_current; 
-      }
-
-      double bprime = (LG_k_bessel(abs(nu+eps),abs(product_terms)) - LG_k_bessel(abs(nu),abs(product_terms)))/eps ;
-
-      double log_y_ig = 0.5*(log(omegas[g] + delta) - log(omegas[g] + rho)) + bprime;   
-
-      if(log_y_ig < 1.0e20) {
-        c_is[g].at(i) = log_y_ig; 
-      }
-      
     }
+
 
     a_bar_g  = arma::sum(zi_gs.col(g) % a_is.at(g)); 
     b_bar_g = arma::sum(zi_gs.col(g) % b_is.at(g));
@@ -1020,25 +1089,36 @@ void GH_Mixture_Model::E_step_latent(void)
 // function under infinite liklihood problem. 
 void GH_Mixture_Model::M_step_alphas(void) {
 
-  arma::vec mu_g, alpha_g;  
+  // initialize type. 
+  arma::vec alpha_g;  
+
+  // go through groups. 
   for(int g = 0; g < G; g++){
  
+    // these are used throughout the loop
+    const double a_bar = abar_gs.at(g);
+    const double b_bar = bbar_gs.at(g);
     
-    mu_g = mus[g]; 
-    alpha_g = arma::vec(p,arma::fill::zeros); 
+    // initialize at the start. 
+    alpha_g = arma::vec(p, arma::fill::zeros); 
 
-    double a_sum = arma::sum(a_is.at(g) % zi_gs.col(g)); 
+    double b_sum = arma::sum(b_is.at(g) % zi_gs.col(g)); 
+    double denom = a_bar*b_sum - n_gs.at(g);
 
+    // go through observations. 
     for(int i = 0; i < n; i++){
       
       // denominator term is constant for both calculations
       double z_ig  = zi_gs.at(i,g);
       arma::vec x_i = data.col(i);
+      
+      // update skewness parameter. 
+      alpha_g += z_ig * x_i * (b_bar - b_is[g].at(i));
     
-      alpha_g += (z_ig*(x_i - mu_g));
-   
     }
-    alphas[g] = alpha_g/a_sum;
+
+    alphas[g] = alpha_g/denom;
+
   }
 
 }
@@ -1048,29 +1128,34 @@ void GH_Mixture_Model::M_step_alphas(void) {
 void GH_Mixture_Model::M_step_mus(void) {
 
   arma::vec mu_g, alpha_g;  
+
+  // go through groups. 
   for(int g = 0; g < G; g++){
  
     // these are used throughout the loop
     const double a_bar = abar_gs.at(g);
     const double b_bar = bbar_gs.at(g);
     
+    // initialize at the start. 
     mu_g = arma::vec(p,arma::fill::zeros); 
-    alpha_g = mu_g; 
-
+    alpha_g = arma::vec(p, arma::fill::zeros); 
 
     double b_sum = arma::sum(b_is.at(g) % zi_gs.col(g)); 
-
     double denom = a_bar*b_sum - n_gs.at(g);
 
+    // go through observations. 
     for(int i = 0; i < n; i++){
       
       // denominator term is constant for both calculations
       double z_ig  = zi_gs.at(i,g);
       arma::vec x_i = data.col(i);
+      
+      // update location parameter. 
+      mu_g += z_ig * x_i * (a_bar * b_is.at(g).at(i) - 1);
 
-      mu_g += (x_i*z_ig*(a_bar*b_is.at(g).at(i) - 1));
+      // update skewness parameter. 
+      alpha_g += z_ig * x_i * (b_bar - b_is[g].at(i));
     
-      alpha_g += (x_i*z_ig*(b_bar - b_is[g].at(i) ));
     }
 
     alphas[g] = alpha_g/denom;
@@ -1079,8 +1164,7 @@ void GH_Mixture_Model::M_step_mus(void) {
 
 }
 
-
-
+#pragma once 
 void GH_Mixture_Model::M_step_Ws(void) {
   
   for(int g = 0; g < G; g++)
@@ -1094,38 +1178,51 @@ void GH_Mixture_Model::M_step_Ws(void) {
 
     // flurry matrix calculation 
 
+    arma::vec xbar_g = arma::vec(p,arma::fill::zeros); 
+
     for(int i = 0; i < n; i++)
     {
       const arma::vec xm = data.col(i) - mu_g; 
-      W_g +=  zi_gs.at(i,g)*( bs.at(i)*xm*xm.t() - xm*alpha_g.t() - alpha_g*xm.t() +  as.at(i)*alpha_g*alpha_g.t() ); 
+      xbar_g += zi_gs.at(i,g) * data.col(i); 
+      W_g +=  zi_gs.at(i,g)*( bs.at(i)*xm*xm.t());//- 2.0 * alpha_g*xm.t() +  as.at(i)*alpha_g*alpha_g.t() ); 
     
     }
 
-    Ws.at(g) = W_g/n_gs[g]; // I divide by n_gs here for simplicity, this is similar to the cov.wt R, 
+    xbar_g /= n_gs[g]; 
+    // std::cout << "W_g" << std::endl; 
+  
+    W_g = W_g/n_gs[g]; 
+    W_g = adjust_tol(W_g);
+
+    W_g += - alpha_g * (xbar_g - mu_g).t() - (xbar_g - mu_g) * alpha_g.t()  + abar_gs[g] * alpha_g * alpha_g.t();     
+    W_g = adjust_tol(W_g); 
+   
+    Ws.at(g) = W_g; 
     // do not confuse this statement with the true flury matrix.  
   }
 
 }
 
-double GH_Mixture_Model::q_function(int g){
-  double result = -bessy(lambdas[g],omegas[g]) + (lambdas[g] - 1)*cbar_gs[g] - 0.5*omegas[g]*(abar_gs[g] + bbar_gs[g]); 
-  return(result); 
+
+#pragma once
+double log_bessel_k(double nu, double x){
+  return ( log( R::bessel_k(abs(x), nu, 2.0) ) - abs(x) ); 
+}
+
+#pragma once
+double q_prime(double lambda, double omega, double abar,double bbar){
+  double result = - log_bessel_k(lambda, omega + eps) + log_bessel_k(lambda, omega); 
+  result /= eps; 
+  result = result -  0.5 * (abar + bbar); 
+  return result; 
 }
 
 
-// computes the first order forward derivarive approximation. 
-double GH_Mixture_Model::q_deriv(int g){
-  double result = 0.0; 
-  double first_deriv_term = -(bessy(lambdas[g],omegas[g]+eps) - bessy(lambdas[g],omegas[g]))/eps; 
-  result = first_deriv_term - 0.5*(abar_gs[g] + bbar_gs[g]); 
-  return(result); 
-}
-
-double GH_Mixture_Model::q_deriv_2(int g){
-  const double lam_g = lambdas[g]; 
-  const double om_g = omegas[g]; 
-  double result = -(( bessy(lam_g,om_g + 2.0*eps) - 2.0*bessy(lam_g, om_g + eps) + bessy(lam_g,om_g))/(eps*eps)); 
-  return (result); 
+#pragma once 
+double qdprime(double lambda, double omega){
+  double result = - (log_bessel_k(lambda, omega + 2.0 * eps) - 2.0 * log_bessel_k(lambda, omega + eps) + log_bessel_k(lambda, omega)); 
+  result /= (eps * eps);
+  return result;  
 }
 
 
@@ -1135,14 +1232,17 @@ void GH_Mixture_Model::M_step_gamma(void) {
   double lambda_new = 0.0;
 
   for(int g = 0; g < G; g++){
-    double bess_prime = (LG_k_bessel(abs(lambdas[g] + eps),omegas[g]) - LG_k_bessel(abs(lambdas[g]),omegas[g]))/eps; 
+
+
+    double bess_prime = (LG_k_bessel(lambdas[g] + eps,omegas[g]) - LG_k_bessel(lambdas[g],omegas[g]))/eps; 
+
     lambda_new = cbar_gs[g]*lambdas[g]/bess_prime; 
-    omega_new = omegas[g] - q_deriv(g)/q_deriv_2(g); 
-    //if(lambda_new < 0){ lambda_new = abs(lambda_new);}
-    if(isnan(lambda_new) || isinf(lambda_new)){}
-    else{ lambdas[g] = lambda_new;}
-    if(isnan(omega_new) || isinf(omega_new)){}
-    else{omegas[g] = omega_new; }
+    lambdas[g] = lambda_new;
+
+    omega_new = omegas[g] - q_prime(lambdas[g], omegas[g], abar_gs[g], bbar_gs[g])/qdprime(lambdas[g], omegas[g]); 
+    omegas[g] = abs(omega_new) ;
+
+
   }
 
 }

@@ -13,6 +13,7 @@ tpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
   if (!is.numeric(data)) stop('The data is required to be numeric')
   if (nrow(data) == 1) stop('nrow(data) is equal to 1')
   if (ncol(data) == 1) stop('ncol(data) is equal to 1; This function currently only works with multivariate data p > 1')
+  
   # check for full NAs vector. as mixture version 1.6+ can handle missing data.  
   apply(data,1,checkNA)
   
@@ -74,6 +75,9 @@ tpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
     if ( any(is.na(data)) ) { stop("You cannot use kmeans on missing values, try soft initialization first, then after a kmeans start.") }
     startobject <- "kmeans"
   } 
+  else if (start > 2) {
+		startobject <- "multi"
+	}
   else{
     stop("start setting is not valid")
   }
@@ -140,18 +144,17 @@ tpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
                             "random_soft"=z_ig_random_soft(n,G_i),
                             "random_hard"=z_ig_random_hard(n,G_i),
                             "kmeans"=z_ig_kmeans(data,G_i),
-                            "matrix"=start)
+                            "matrix"=start,
+                            "multi"=z_ig_random_soft(n, G_i))
           
           # handle labels within z_ig matrix.  
           if(!is.null(label)){
-
             model_id_stochastic_check <- 2
 
 						if(stochastic)
 						{
 							stop('Under current version, you cannot have semi-supervision and stochastic EM')
 						}
-
 
             # start observation count
             i <- 1
@@ -171,8 +174,61 @@ tpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
         else{
           in_zigs <- as.matrix(rep(1.0,n))
         }
-        # GET MODEL ID 
-        model_id <- model_to_id(model_name)
+
+				# Handle multiple starts 
+				if(startobject == "multi" && G_i > 1){
+        
+					# run first model with settings
+					model_results_i <- main_loop_t(X=data, G=G_i, in_zigs=z_ig_random_soft(n, G_i),# dataset G_i, z_igs
+											model_id=model_id_stochastic_check, model_type=model_id + 20*stochastic, # for all intensive purposes these are the same. (They will change later)
+											in_nmax=10, in_l_tol=atol, # em number of iterations 
+											in_m_iter_max=mmax,in_m_tol=mtol, # m_step matrix iterations and convergence settings 
+											anneals=da,t_burn=burn) # annealing and burn in settings. 
+
+					# handle errors just in case. 
+					if(!is.null(model_results_i$Error)){
+						best_loglik <- -Inf 
+						best_z_start <- z_ig_random_soft(n, G_i)
+					}
+					else{
+						best_loglik <- tail(model_results_i$logliks, 1) 
+						best_z_start <- model_results_i$zigs
+					}
+
+					# attempt multiple starts. 
+					for(i in 2:start){
+
+            # run first model with settings
+            model_results_i <- main_loop_t(X=data, G=G_i, in_zigs=z_ig_random_soft(n, G_i),# dataset G_i, z_igs
+                        model_id=model_id_stochastic_check, model_type=model_id + 20*stochastic, # for all intensive purposes these are the same. (They will change later)
+                        in_nmax=10, in_l_tol=atol, # em number of iterations 
+                        in_m_iter_max=mmax,in_m_tol=mtol, # m_step matrix iterations and convergence settings 
+                        anneals=da,t_burn=burn) # annealing and burn in settings. 
+
+            # handle errors. 
+						if(!is.null(model_results_i$Error)){
+							current_loglik <- -Inf 
+							current_z_start <- z_ig_random_soft(n, G_i)
+						}
+						else{
+							current_loglik <- tail(model_results_i$logliks, 1) 
+							current_z_start <- model_results_i$zigs
+						}
+
+						# check if the start was better. 
+						if(current_loglik > best_loglik){
+							best_loglik <- current_loglik
+							best_z_start <- current_z_start
+						}
+
+          }
+
+					# give a good start. 
+					in_zigs <- as.matrix(best_z_start)
+
+        }
+
+
         # RUN MODEL 
         model_results_i <- main_loop_t(X = data,
                                         G = G_i, in_zigs = in_zigs, model_id = constrained + 20 + model_id_stochastic_check,
@@ -211,6 +267,10 @@ tpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
     
   }
   
+	if(start > 2){
+		startobject <- paste(start, "random soft initializations.")
+	} 
+
   info_matrix <- list(startobject=startobject, # gives starting object information. 
                       info_loglik=info_loglik,info_npar=info_npar,info_BIC=info_BIC, # logliks, params, BICs, 
                       lexicon=info_model_lexicon,model_objs=info_model,Gs=G,row_tags=(row_tags+1)) # lexicon (tags), and model_objs 

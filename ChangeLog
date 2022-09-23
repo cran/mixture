@@ -1,3 +1,7 @@
+mixture version 2.0.5 2021-09-16: 
+- Multiple random-soft initialization added for all parsimonious models. 
+- Further stability improvements.
+
 mixture version 2.0.4 2021-04-14:
 - Semi-supervised bug fixes. 
 

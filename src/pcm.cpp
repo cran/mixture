@@ -8,7 +8,7 @@
 #define ARMA_HAVE_STD_ISINF
 #define ARMA_HAVE_STD_ISNAN
 #define ARMA_HAVE_STD_SNPRINTF
-#define ARMA_DONT_PRINT_ERRORS
+#define ARMA_WARN_LEVEL 0
 
 
 
@@ -36,7 +36,6 @@
 #include <memory> 
 #include <random>
 #include "Cluster_Error.hpp"
-
 
 
 // [[Rcpp::depends(RcppArmadillo)]]

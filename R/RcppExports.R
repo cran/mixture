@@ -17,8 +17,8 @@ e_step_internal <- function(X, G, model_id, model_type, in_m_obj, init_zigs, in_
     .Call(`_mixture_e_step_internal`, X, G, model_id, model_type, in_m_obj, init_zigs, in_nu)
 }
 
-main_loop_st <- function(X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, t_burn = 5L) {
-    .Call(`_mixture_main_loop_st`, X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, t_burn)
+main_loop_st <- function(X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, latent_step = "standard", t_burn = 5L) {
+    .Call(`_mixture_main_loop_st`, X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, latent_step, t_burn)
 }
 
 st_e_step_internal <- function(X, G, model_id, model_type, in_m_obj, init_zigs, in_nu = 1.0) {
@@ -33,8 +33,8 @@ t_e_step_internal <- function(X, G, model_id, model_type, in_m_obj, init_zigs, i
     .Call(`_mixture_t_e_step_internal`, X, G, model_id, model_type, in_m_obj, init_zigs, in_nu)
 }
 
-main_loop_vg <- function(X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, t_burn = 5L) {
-    .Call(`_mixture_main_loop_vg`, X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, t_burn)
+main_loop_vg <- function(X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, latent_step = "standard", t_burn = 5L) {
+    .Call(`_mixture_main_loop_vg`, X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, latent_step, t_burn)
 }
 
 vg_e_step_internal <- function(X, G, model_id, model_type, in_m_obj, init_zigs, in_nu = 1.0) {

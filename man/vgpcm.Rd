@@ -8,7 +8,8 @@ vgpcm(data=NULL, G=1:3, mnames=NULL,
 		start=2, label=NULL, 
 		veo=FALSE, da=c(1.0),
 		nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5,
-		pprogress=FALSE, pwarning=FALSE, stochastic = FALSE) 
+		pprogress=FALSE, pwarning=FALSE, 
+		stochastic = FALSE, latent_method="standard") 
 }
 \arguments{
   \item{data}{
@@ -24,6 +25,7 @@ A matrix or data frame such that rows correspond to observations and columns cor
 	If \code{0} then the random soft function is used for initialization.
 	If \code{1} then the random hard function is used for initialization.
 	If \code{2} then the kmeans function is used for initialization. 
+	If \code{>2} then multiple random soft starts are used for initialization. 
 	If \code{is.matrix} then matrix is used as an initialization matrix as along as it has non-negative elements. Note: only models with the same number of columns of this matrix will be fit.
 }
 \item{label}{
@@ -59,6 +61,9 @@ A matrix or data frame such that rows correspond to observations and columns cor
 }
  \item{stochastic}{
 	If \code{TRUE} , it will run stochastic E step variant. 
+}
+  \item{latent_method}{
+    	If \code{"standard"}, it will use the standard E step for latent variable of a Normal Variance Mean Mixture, if \code{"random"} it will run a random draw from a GIG distribution.
 }
 }
 \details{

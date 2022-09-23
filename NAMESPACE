@@ -9,6 +9,7 @@ importFrom("stats", "cov.wt", "kmeans", "runif", "weights")
 importFrom("utils", "tail")
 importFrom("stats", "aggregate")
 importFrom("stats", "rexp")
+importFrom("methods", "is")
 
 export(main_loop)
 export(main_loop_vg)

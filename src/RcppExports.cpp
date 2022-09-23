@@ -7,6 +7,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // main_loop_gh
 Rcpp::List main_loop_gh(arma::mat X, int G, int model_id, int model_type, arma::mat in_zigs, int in_nmax, double in_l_tol, int in_m_iter_max, double in_m_tol, arma::vec anneals, int t_burn);
 RcppExport SEXP _mixture_main_loop_gh(SEXP XSEXP, SEXP GSEXP, SEXP model_idSEXP, SEXP model_typeSEXP, SEXP in_zigsSEXP, SEXP in_nmaxSEXP, SEXP in_l_tolSEXP, SEXP in_m_iter_maxSEXP, SEXP in_m_tolSEXP, SEXP annealsSEXP, SEXP t_burnSEXP) {
@@ -84,8 +89,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // main_loop_st
-Rcpp::List main_loop_st(arma::mat X, int G, int model_id, int model_type, arma::mat in_zigs, int in_nmax, double in_l_tol, int in_m_iter_max, double in_m_tol, arma::vec anneals, int t_burn);
-RcppExport SEXP _mixture_main_loop_st(SEXP XSEXP, SEXP GSEXP, SEXP model_idSEXP, SEXP model_typeSEXP, SEXP in_zigsSEXP, SEXP in_nmaxSEXP, SEXP in_l_tolSEXP, SEXP in_m_iter_maxSEXP, SEXP in_m_tolSEXP, SEXP annealsSEXP, SEXP t_burnSEXP) {
+Rcpp::List main_loop_st(arma::mat X, int G, int model_id, int model_type, arma::mat in_zigs, int in_nmax, double in_l_tol, int in_m_iter_max, double in_m_tol, arma::vec anneals, std::string latent_step, int t_burn);
+RcppExport SEXP _mixture_main_loop_st(SEXP XSEXP, SEXP GSEXP, SEXP model_idSEXP, SEXP model_typeSEXP, SEXP in_zigsSEXP, SEXP in_nmaxSEXP, SEXP in_l_tolSEXP, SEXP in_m_iter_maxSEXP, SEXP in_m_tolSEXP, SEXP annealsSEXP, SEXP latent_stepSEXP, SEXP t_burnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -99,8 +104,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type in_m_iter_max(in_m_iter_maxSEXP);
     Rcpp::traits::input_parameter< double >::type in_m_tol(in_m_tolSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type anneals(annealsSEXP);
+    Rcpp::traits::input_parameter< std::string >::type latent_step(latent_stepSEXP);
     Rcpp::traits::input_parameter< int >::type t_burn(t_burnSEXP);
-    rcpp_result_gen = Rcpp::wrap(main_loop_st(X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, t_burn));
+    rcpp_result_gen = Rcpp::wrap(main_loop_st(X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, latent_step, t_burn));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -160,8 +166,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // main_loop_vg
-Rcpp::List main_loop_vg(arma::mat X, int G, int model_id, int model_type, arma::mat in_zigs, int in_nmax, double in_l_tol, int in_m_iter_max, double in_m_tol, arma::vec anneals, int t_burn);
-RcppExport SEXP _mixture_main_loop_vg(SEXP XSEXP, SEXP GSEXP, SEXP model_idSEXP, SEXP model_typeSEXP, SEXP in_zigsSEXP, SEXP in_nmaxSEXP, SEXP in_l_tolSEXP, SEXP in_m_iter_maxSEXP, SEXP in_m_tolSEXP, SEXP annealsSEXP, SEXP t_burnSEXP) {
+Rcpp::List main_loop_vg(arma::mat X, int G, int model_id, int model_type, arma::mat in_zigs, int in_nmax, double in_l_tol, int in_m_iter_max, double in_m_tol, arma::vec anneals, std::string latent_step, int t_burn);
+RcppExport SEXP _mixture_main_loop_vg(SEXP XSEXP, SEXP GSEXP, SEXP model_idSEXP, SEXP model_typeSEXP, SEXP in_zigsSEXP, SEXP in_nmaxSEXP, SEXP in_l_tolSEXP, SEXP in_m_iter_maxSEXP, SEXP in_m_tolSEXP, SEXP annealsSEXP, SEXP latent_stepSEXP, SEXP t_burnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -175,8 +181,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type in_m_iter_max(in_m_iter_maxSEXP);
     Rcpp::traits::input_parameter< double >::type in_m_tol(in_m_tolSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type anneals(annealsSEXP);
+    Rcpp::traits::input_parameter< std::string >::type latent_step(latent_stepSEXP);
     Rcpp::traits::input_parameter< int >::type t_burn(t_burnSEXP);
-    rcpp_result_gen = Rcpp::wrap(main_loop_vg(X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, t_burn));
+    rcpp_result_gen = Rcpp::wrap(main_loop_vg(X, G, model_id, model_type, in_zigs, in_nmax, in_l_tol, in_m_iter_max, in_m_tol, anneals, latent_step, t_burn));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -203,11 +210,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_mixture_gh_e_step_internal", (DL_FUNC) &_mixture_gh_e_step_internal, 7},
     {"_mixture_main_loop", (DL_FUNC) &_mixture_main_loop, 11},
     {"_mixture_e_step_internal", (DL_FUNC) &_mixture_e_step_internal, 7},
-    {"_mixture_main_loop_st", (DL_FUNC) &_mixture_main_loop_st, 11},
+    {"_mixture_main_loop_st", (DL_FUNC) &_mixture_main_loop_st, 12},
     {"_mixture_st_e_step_internal", (DL_FUNC) &_mixture_st_e_step_internal, 7},
     {"_mixture_main_loop_t", (DL_FUNC) &_mixture_main_loop_t, 11},
     {"_mixture_t_e_step_internal", (DL_FUNC) &_mixture_t_e_step_internal, 7},
-    {"_mixture_main_loop_vg", (DL_FUNC) &_mixture_main_loop_vg, 11},
+    {"_mixture_main_loop_vg", (DL_FUNC) &_mixture_main_loop_vg, 12},
     {"_mixture_vg_e_step_internal", (DL_FUNC) &_mixture_vg_e_step_internal, 7},
     {NULL, NULL, 0}
 };

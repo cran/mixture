@@ -356,6 +356,12 @@ Rcpp::List main_loop_t(arma::mat X, // data
                                             Rcpp::Named("n_gs") = m->n_gs,
                                             Rcpp::Named("log_dets") = m->log_dets,
                                             Rcpp::Named("logliks") = m->logliks);
+
+
+      if(NA_check){
+        ret_val["X"] = m->data.t(); 
+      }     
+      return ret_val; 
     }
 
     return Rcpp::List::create(Rcpp::Named("Error") = e.what()); 
@@ -372,7 +378,10 @@ Rcpp::List main_loop_t(arma::mat X, // data
                                             Rcpp::Named("log_dets") = m->log_dets,
                                             Rcpp::Named("logliks") = m->logliks);
 
-  
+    if(NA_check){
+      ret_val["X"] = m->data.t(); 
+    }
+              
   return ret_val;
 }
 

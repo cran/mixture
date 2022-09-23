@@ -1,6 +1,13 @@
 #include <exception> 
 #include <string> 
 
+#pragma once 
+bool is_string_comparison(std::exception e_ , std::string message_) 
+{
+  bool check = (0 == std::string(e_.what()).compare(message_)); // compare if string and message match. 
+  return check;
+}
+
 // exception thrower.
 #pragma once
 struct bad_sym_except : std::exception

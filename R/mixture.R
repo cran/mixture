@@ -94,10 +94,12 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 	  if ( any(is.na(data)) ) { stop("You cannot use kmeans on missing values, try soft initialization first, then after a kmeans start.") }
 		startobject <- "kmeans"
 	} 
+	else if (start > 2) {
+		startobject <- "multi"
+	}
 	else{
 		stop("start setting is not valid")
 	}
-
 
 	# deterministic annealing sanity checks
 	if(any(is.na(da))){ stop("deterministic annealing should contain no NAs") } # check NAs
@@ -159,7 +161,8 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 					"random_soft"=z_ig_random_soft(n,G_i),
 					"random_hard"=z_ig_random_hard(n,G_i),
 					"kmeans"=z_ig_kmeans(data,G_i),
-					"matrix"=start)
+					"matrix"=start,
+					"multi"=z_ig_random_soft(n, G_i))
 				
 					# handle labels within z_ig matrix.  
 					if(!is.null(label)){
@@ -189,7 +192,60 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 					in_zigs <- as.matrix(rep(1.0,n))
 				}
 
-				# run model with settings 
+				# Handle multiple starts 
+				if(startobject == "multi" && G_i > 1){
+					
+					# run first model with settings
+					model_results_i <- main_loop(X=data, G=G_i, in_zigs=z_ig_random_soft(n, G_i),# dataset G_i, z_igs
+											model_id=model_id_stochastic_check, model_type=model_id + 20*stochastic, # for all intensive purposes these are the same. (They will change later)
+											in_nmax=10, in_l_tol=atol, # em number of iterations 
+											in_m_iter_max=mmax,in_m_tol=mtol, # m_step matrix iterations and convergence settings 
+											anneals=da,t_burn=burn) # annealing and burn in settings. 
+
+					# handle errors just in case. 
+					if(!is.null(model_results_i$Error)){
+						best_loglik <- -Inf 
+						best_z_start <- z_ig_random_soft(n, G_i)
+					}
+					else{
+						best_loglik <- tail(model_results_i$logliks, 1) 
+						best_z_start <- model_results_i$zigs
+					}
+
+					# attempt multiple starts. 
+					for(i in 2:start){
+
+						# run rest model with settings 
+						model_results_i <- main_loop(X=data, G=G_i, in_zigs=z_ig_random_soft(n, G_i),# dataset G_i, z_igs
+												model_id=model_id_stochastic_check, model_type=model_id + 20*stochastic, # for all intensive purposes these are the same. (They will change later)
+												in_nmax=10, in_l_tol=atol, # em number of iterations 
+												in_m_iter_max=mmax,in_m_tol=mtol, # m_step matrix iterations and convergence settings 
+												anneals=da,t_burn=burn) # annealing and burn in settings. 
+
+						# handle errors. 
+						if(!is.null(model_results_i$Error)){
+							current_loglik <- -Inf 
+							current_z_start <- z_ig_random_soft(n, G_i)
+						}
+						else{
+							current_loglik <- tail(model_results_i$logliks, 1) 
+							current_z_start <- model_results_i$zigs
+						}
+
+						# check if the start was better. 
+						if(current_loglik > best_loglik){
+							best_loglik <- current_loglik
+							best_z_start <- current_z_start
+						}
+
+					}
+					
+					# give a good start. 
+					in_zigs <- as.matrix(best_z_start)
+
+				}
+
+				# final run - model with settings 
 				model_results_i <- main_loop(X=data, G=G_i, in_zigs=in_zigs,# dataset G_i, z_igs
 										model_id=model_id_stochastic_check, model_type=model_id + 20*stochastic, # for all intensive purposes these are the same. (They will change later)
 										in_nmax=nmax, in_l_tol=atol, # em number of iterations 
@@ -200,6 +256,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 				if (nmax > length(model_results_i$logliks)) {
 					status <- "Converged according to Aitken's Convergence Criterion"
 				}
+
 				# AQUIRE STATUS IF ANY 
 				model_results_i$status <- status
 				if(is.null(model_results_i$Error)){
@@ -221,6 +278,10 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 		}
 
 	}
+
+	if(start > 2){
+		startobject <- paste(start, "random soft initializations.")
+	} 
 
 	info_matrix <- list(startobject=startobject, # gives starting object information. 
 						info_loglik=info_loglik,info_npar=info_npar,info_BIC=info_BIC, # logliks, params, BICs, 
@@ -820,7 +881,7 @@ sARI <- function(X = NULL, Y = NULL)
     sum.by.assn = function(hard, soft){aggregate(soft, list(hard), sum)}
     agree.tab = as.matrix(sum.by.assn(xs, ys))[,-1]
     N = sum(agree.tab)
-    if(class(agree.tab) == "numeric") agree.tab = as.matrix(agree.tab, ncol = unique(xs))
+    if(is(agree.tab, "numeric")) agree.tab = as.matrix(agree.tab, ncol = unique(xs))
   } else {
     xs = as.matrix(xs)
     ys = as.matrix(ys)

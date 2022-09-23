@@ -1,5 +1,5 @@
 #pragma once
-const double eps = 0.001; 
+const double eps = 0.00001; 
 
 
 #pragma once 
@@ -2313,6 +2313,7 @@ Rcpp::List main_loop(arma::mat X, // data
   {
     // Rcpp::Rcout  << "C++ Error has occured during iterations. See message below." << '\n'; 
     // Rcpp::Rcout << e.what() << '\n';
+    
     return Rcpp::List::create(Rcpp::Named("Error") = "Iteration Error, decreasing loglik"); 
     Rcpp::List ret_val = Rcpp::List::create(
                                             Rcpp::Named("mus") = m->mus, 
@@ -2323,6 +2324,10 @@ Rcpp::List main_loop(arma::mat X, // data
                                             Rcpp::Named("n_gs") = m->n_gs,
                                             Rcpp::Named("log_dets") = m->log_dets,
                                             Rcpp::Named("logliks") = m->logliks);
+
+    if(NA_check){
+      ret_val["X"] = m->data.t(); 
+    }
                                             
     
     return ret_val;
@@ -2337,6 +2342,10 @@ Rcpp::List main_loop(arma::mat X, // data
                                             Rcpp::Named("n_gs") = m->n_gs,
                                             Rcpp::Named("log_dets") = m->log_dets,
                                             Rcpp::Named("logliks") = m->logliks);
+
+    if(NA_check){
+      ret_val["X"] = m->data.t(); 
+    }            
   
   return ret_val;
 }

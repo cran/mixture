@@ -9,6 +9,7 @@ ghpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 
 	# Do some sanity checks. 
 	if (is.null(data)) stop('Hey, we need some data, please! data is null')
+	if (any(is.na(data))) stop('Imputation for generalized hyperbolic family is unavailable for this version.')
 	if (!is.matrix(data)) stop('The data needs to be in matrix form')
 	if (!is.numeric(data)) stop('The data is required to be numeric')
 	if (nrow(data) == 1) stop('nrow(data) is equal to 1')
@@ -74,6 +75,9 @@ ghpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 	  if ( any(is.na(data)) ) { stop("You cannot use kmeans on missing values, try soft initialization first, then after a kmeans start.") }
 		startobject <- "kmeans"
 	} 
+	else if (start > 2){
+		startobject <- "multi"
+	}
 	else{
 		stop("start setting is not valid")
 	}
@@ -140,7 +144,9 @@ ghpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 					"random_soft"=z_ig_random_soft(n,G_i),
 					"random_hard"=z_ig_random_hard(n,G_i),
 					"kmeans"=z_ig_kmeans(data,G_i),
-					"matrix"=start)
+					"matrix"=start,
+					"multi"=z_ig_random_soft(n, G_i))
+
 
 					# handle labels within z_ig matrix.  
 					if(!is.null(label)){
@@ -170,43 +176,100 @@ ghpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 					in_zigs <- as.matrix(rep(1.0,n))
 				}
 
-			  # RUN MODEL 
-			  model_results_i <- main_loop_gh(X = t(data),
+				# Handle multiple starts 
+				if(startobject == "multi" && G_i > 1){
+
+					# run first model with settings. 
+					model_results_i <- main_loop_gh(X = t(data),
+												G = G_i, in_zigs = in_zigs, model_id = model_id_stochastic_check,
+												model_type = model_id + stochastic*20, in_nmax = nmax, in_l_tol = atol,
+												in_m_iter_max = mmax, in_m_tol = mtol, anneals = da,
+												t_burn = burn)
+
+					# handle errors just in case. 
+					if(!is.null(model_results_i$Error)){
+						best_loglik <- -Inf 
+						best_z_start <- z_ig_random_soft(n, G_i)
+					}
+					else{
+						best_loglik <- tail(model_results_i$logliks, 1) 
+						best_z_start <- model_results_i$zigs
+					}
+
+					# attempt multiple starts. 
+					for(i in 2:start){
+
+							# run rest model with settings. 
+							model_results_i <- main_loop_gh(X = t(data),
+															G = G_i, in_zigs = in_zigs, model_id = model_id_stochastic_check,
+															model_type = model_id + stochastic*20, in_nmax = nmax, in_l_tol = atol,
+															in_m_iter_max = mmax, in_m_tol = mtol, anneals = da,
+															t_burn = burn)
+
+						# handle errors. 
+						if(!is.null(model_results_i$Error)){
+							current_loglik <- -Inf 
+							current_z_start <- z_ig_random_soft(n, G_i)
+						}
+						else{
+							current_loglik <- tail(model_results_i$logliks, 1) 
+							current_z_start <- model_results_i$zigs
+						}
+
+						# check if the start was better. 
+						if(current_loglik > best_loglik){
+							best_loglik <- current_loglik
+							best_z_start <- current_z_start
+						}
+
+					}
+
+					# give a good start. 
+					in_zigs <- as.matrix(best_z_start)
+				}
+
+
+				# RUN MODEL 
+				model_results_i <- main_loop_gh(X = t(data),
 			                                  G = G_i, in_zigs = in_zigs, model_id = model_id_stochastic_check,
 			                                  model_type = model_id + stochastic*20, in_nmax = nmax, in_l_tol = atol,
 			                                  in_m_iter_max = mmax, in_m_tol = mtol, anneals = da,
 			                                  t_burn = burn)
-			  status <- "Failed Aitken's Convergence Criterion"
-			  if (nmax > length(model_results_i$logliks)) {
-			    status <- "Converged according to Aitken's Convergence Criterion"
-			  }
+
+				status <- "Failed Aitken's Convergence Criterion"
+				if (nmax > length(model_results_i$logliks)) {
+					status <- "Converged according to Aitken's Convergence Criterion"
+				}
 				if(pwarning && !is.null(model_results_i$Error) ){
 					cat(paste(model_name,"| G =",G_i,":",model_results_i$Error),"\n")
 				}
 
-			  # AQUIRE STATUS IF ANY 
-			  model_results_i$status <- status
-			  if(is.null(model_results_i$Error)){
-			    info_loglik <- append(tail(model_results_i$logliks,1),info_loglik) # first one is loglik 
-			    info_npar <- append(number_of_params,info_npar) # number of paramaters. 
-			    info_BIC <- append(2*info_loglik[1] - log(n)*info_npar[1],info_BIC) # append BIC value 
-			    info_model_lexicon <- append(paste("Model:", model_name, "G: ",G_i),info_model_lexicon) # lexicon for summary
-			    model_results_i$sigs <- convert_matrices(model_results_i,G_i,p) # convert matrices into proper form
-			    info_model <- append(list(model_results_i),info_model) # store all model objects. 
-			  }
-			  else {
-					info_loglik <- append(NA,info_loglik) # first one is loglik 
+				# AQUIRE STATUS IF ANY 
+				model_results_i$status <- status
+				if(is.null(model_results_i$Error)){
+					info_loglik <- append(tail(model_results_i$logliks,1),info_loglik) # first one is loglik 
 					info_npar <- append(number_of_params,info_npar) # number of paramaters. 
-					info_BIC <- append(NA,info_BIC) # append BIC value 
+					info_BIC <- append(2*info_loglik[1] - log(n)*info_npar[1],info_BIC) # append BIC value 
 					info_model_lexicon <- append(paste("Model:", model_name, "G: ",G_i),info_model_lexicon) # lexicon for summary
-					info_model <- append(list(NA),info_model) # store all model objects. 
+					model_results_i$sigs <- convert_matrices(model_results_i,G_i,p) # convert matrices into proper form
+					info_model <- append(list(model_results_i),info_model) # store all model objects. 
 				}
-			  
-
+				else {
+						info_loglik <- append(NA,info_loglik) # first one is loglik 
+						info_npar <- append(number_of_params,info_npar) # number of paramaters. 
+						info_BIC <- append(NA,info_BIC) # append BIC value 
+						info_model_lexicon <- append(paste("Model:", model_name, "G: ",G_i),info_model_lexicon) # lexicon for summary
+						info_model <- append(list(NA),info_model) # store all model objects. 
+					}
+				
 			}
 		}
 
 	}
+
+	if(start > 2){
+		startobject <- paste(start, "random soft initializations.")
+	} 
 
 	info_matrix <- list(startobject=startobject, # gives starting object information. 
 						info_loglik=info_loglik,info_npar=info_npar,info_BIC=info_BIC, # logliks, params, BICs, 
@@ -235,8 +298,6 @@ ghpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 
 	info_matrix$gpar <- gpar
 	info_matrix$z <- info_matrix$best_model$model_obj[[1]]$zigs
-
-
 
 
 	class(info_matrix) <- "ghpcm"

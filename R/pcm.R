@@ -22,20 +22,19 @@ pcm <- function(data=NULL,  G=1:3, pcmfamily=c(gpcm,vgpcm,tpcm), # just pass in 
       results = pc_function(data=data,G=G,mnames=mnames,start=start,label=label,veo=veo,
                             da=da,nmax=nmax,atol=atol,mtol=mtol,mmax=mmax,burn=burn,pprogress=pprogress,
                             pwarning=pwarning)
-      family_string <- class(results)
-      if(family_string == "gpcm"){
+      if(is(results,"gpcm")){
         all_results <- append(all_results, list("gpcm" = results))
       }
-      if(family_string == "stpcm"){
+      if(is(results,"stpcm")){
         all_results <- append(all_results, list("stpcm" = results))
       }
-      if(family_string == "ghpcm"){
+      if(is(results,"ghpcm")){
         all_results <- append(all_results, list("ghpcm" = results))
       }
-      if(family_string =="vgpcm"){
+      if(is(results,"vgpcm")){
         all_results <- append(all_results, list("vgpcm" = results))
       }
-      if(family_string =="tpcm"){
+      if(is(results,"tpcm")){
         all_results <- append(all_results, list("tpcm" = results))
       }
   }
