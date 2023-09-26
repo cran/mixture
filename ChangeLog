@@ -1,4 +1,8 @@
-mixture version 2.0.5 2021-09-16: 
+mixture version 2.0.6 2023-09-26: 
+- Alias added to mixture.Rd 
+- CXX_STD no longer specified.
+
+mixture version 2.0.5 2022-09-16: 
 - Multiple random-soft initialization added for all parsimonious models. 
 - Further stability improvements.
 

@@ -1,8 +1,8 @@
 Package: mixture
 Type: Package
 Title: Mixture Models for Clustering and Classification
-Version: 2.0.5
-Date: 2022-09-23
+Version: 2.0.6
+Date: 2023-09-26
 Authors@R: c(person("Nik", "Pocuca", role=c("aut"), comment = c(ORCID = "0000-0001-8365-0751")), 
             person("Ryan P.", "Browne", role = c("aut"), comment = c(ORCID = "0000-0003-4543-0218")),
             person("Paul D.", "McNicholas", role = c("aut", "cre"), email = "mcnicholas@math.mcmaster.ca", comment = c(ORCID = "0000-0002-2482-523X")))
@@ -16,8 +16,8 @@ Imports: Rcpp (>= 1.0.2), methods
 LinkingTo: Rcpp, RcppArmadillo, BH, RcppGSL
 Depends: R (>= 3.5.0), lattice (>= 0.20)
 SystemRequirements: GNU GSL
-Packaged: 2022-09-23 20:53:06 UTC; paul
 Author: Nik Pocuca [aut] (<https://orcid.org/0000-0001-8365-0751>),
   Ryan P. Browne [aut] (<https://orcid.org/0000-0003-4543-0218>),
   Paul D. McNicholas [aut, cre] (<https://orcid.org/0000-0002-2482-523X>)
-Date/Publication: 2022-09-23 21:20:02 UTC
+Packaged: 2023-09-26 16:06:07 UTC; paul
+Date/Publication: 2023-09-26 17:10:07 UTC

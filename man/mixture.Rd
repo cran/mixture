@@ -1,5 +1,6 @@
 \name{mixture}
 \alias{mixture}
+\alias{mixture-package}
 \docType{package}
 \title{Mixture Models for Clustering and Classification}
 \description{
@@ -9,8 +10,8 @@ An implementation of 14 parsimonious clustering models for finite mixtures with 
 \tabular{ll}{
 Package: \tab mixture \cr
 Type: \tab Package\cr
-Version: \tab 2.0.5\cr
-Date: \tab 2022-09-23\cr
+Version: \tab 2.0.6\cr
+Date: \tab 2023-09-26\cr
 License: \tab GPL (>=2)\cr
 }
 This package contains the functions \code{gpcm}, \code{tpcm}, \code{ghpcm}, \code{vgpcm}, \code{stpcm}, \code{e_step}, \code{ARI}, and \code{get_best_model}, plus three simulated data sets.

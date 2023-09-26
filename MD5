@@ -1,5 +1,5 @@
-a71d3269c53d1998da15a2d39c49af51 *ChangeLog
-1809230221864513c468e0721b690f62 *DESCRIPTION
+91425cc0abd9dcf6e4cb7236be9b3f9b *ChangeLog
+b6b88d1ba7c5d122ce27df8449c90221 *DESCRIPTION
 d592df5d1ea67350268bf7eab2361a54 *NAMESPACE
 334f1fc8f09a51c541dd0fae2e2f0c29 *R/RcppExports.R
 4a3956ed84364a0cf8462c65185a6081 *R/gh_mixture.R
@@ -25,7 +25,7 @@ b2660dd4b0af15977a8fbd1339e39999 *man/main_loop_gh.Rd
 2e73167ddede3bfdd4395ced203ad89f *man/main_loop_st.Rd
 62f8eb7f4d954cd4509cf6c5350ce5d8 *man/main_loop_t.Rd
 b8c9c0fa2b4b80abfbf0174eec5e1102 *man/main_loop_vg.Rd
-e539a97c4842da9d32ce2004801e840a *man/mixture.Rd
+c0c8fb716fcff2b2021c4fe036ca1f19 *man/mixture.Rd
 649546331dd89ec06df601db559cb06c *man/pcm.Rd
 c0139a1821d14484ce849b60a3411338 *man/stpcm.Rd
 9bbee03e608d80ab82b3b340c161240e *man/sx2.Rd
@@ -52,8 +52,8 @@ fc4df12f4eb851f6cd42f2281b8a3027 *src/GH_Model/GH_VEI.hpp
 d4346b91535f616eddec0a463c9c986a *src/GH_Model/GH_VVE.hpp
 2e522a93fd864ec4a23b913d7f2110cf *src/GH_Model/GH_VVI.hpp
 3315c2b7b203c100d4aaf9e19cabf070 *src/GH_Model/GH_VVV.hpp
-b4a1737836d21460296f98e4b98829d8 *src/Makevars.in
-4bcc2eb1ad27e2b839d389a6c272807d *src/Makevars.win
+6c41234858f53dc8db4e73918a04c5d3 *src/Makevars.in
+365fa1537de0853f69e9c1de5949fac0 *src/Makevars.win
 637937a1f7aa7576f25433cf4bf67e6f *src/Random_GIG.hpp
 6bfeaf2e4bdd42ba90f36eba38f21895 *src/RcppExports.cpp
 9914ff844365c1502ae495b9c54fbe15 *src/ST_Model/ST_EEE.hpp
