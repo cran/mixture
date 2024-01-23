@@ -51,6 +51,16 @@ public:
             A_gs[g] = A_gs[g]/denom;
         }
 
+        // mstep lambda, or volume
+        arma::mat volume_gs = arma::vec(G, arma::fill::zeros);
+        for(int g = 0; g < G; g++)
+        {
+        arma::mat invA = arma::diagmat(1.0/A_gs[g]);
+        arma::mat matrix_product_D_Wk_D_invA = (D.t() * Ws[g] * D * invA);
+        volume_gs[g] = arma::trace(matrix_product_D_Wk_D_invA) / (n_gs[g] * p);
+        }
+
+
         // ******** BEGIN INTIALIZATION of MM *************** 
 
         // MM pt. 1
@@ -68,7 +78,8 @@ public:
             arma::eig_sym(eigens, L_g, W_temp_g[g]);
             lambda_g = arma::max(eigens); 
             ADK = arma::diagmat(1.0/A_gs[g]) * D.t();
-            interZ += (ADK * W_temp_g[g]) - (lambda_g *ADK);  
+            interZ += (ADK * W_temp_g[g]) - (lambda_g *ADK);
+            interZ /= volume_gs[g];
         }
 
         // svd calculation 
@@ -86,6 +97,7 @@ public:
         {
             lambda_g = arma::max(1.0/A_gs[g]);
             interZ +=  W_temp_g[g] * D * arma::diagmat(1.0/A_gs[g]) - lambda_g * (W_temp_g[g] * D); 
+            interZ /= volume_gs[g];
         }
 
         // calculate svd and set new D. 
@@ -126,6 +138,16 @@ public:
             double denom = pow(arma::prod(A_gs[g]), ((double)((1.0)/((A_gs[g].size())))) );
             A_gs[g] = A_gs[g]/denom;
             }
+
+                    // mstep lambda, or volume
+            volume_gs = arma::vec(G, arma::fill::zeros);
+            for(int g = 0; g < G; g++)
+            {
+            arma::mat invA = arma::diagmat(1.0/A_gs[g]);
+            arma::mat matrix_product_D_Wk_D_invA = (D.t() * Ws[g] * D * invA);
+            volume_gs[g] = arma::trace(matrix_product_D_Wk_D_invA) / (n_gs[g] * p);
+            }
+
             // calculate new D 
             
             // MM pt. 1
@@ -144,6 +166,7 @@ public:
             lambda_g = arma::max(eigens); 
             ADK = arma::diagmat(1.0/A_gs[g]) * D.t();
             interZ += (ADK * W_temp_g[g]) - (lambda_g *ADK);  
+            interZ /= volume_gs[g];
             }
 
             // svd calculation 
@@ -161,6 +184,7 @@ public:
             {
             lambda_g = arma::max(1.0/A_gs[g]);
             interZ +=  W_temp_g[g] * D * arma::diagmat(1.0/A_gs[g]) - lambda_g * (W_temp_g[g] * D); 
+            interZ /= volume_gs[g];
             }
 
             // calculate svd and set new D. 

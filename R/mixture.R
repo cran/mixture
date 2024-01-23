@@ -1,8 +1,6 @@
 
 .packageName<-'mixture' # do I really need this? 
 
-set.seed(1)
-
     # MARK :// ARGS 
     # G , number of groups
     # data , matrix X, 
@@ -23,16 +21,18 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 				start=2, label=NULL, # starting inputs , start = 0: random soft, start = 2, random hard. start = 3 mkmeans. 
 				veo=FALSE, da=c(1.0), # veo (variables exceed observations), da is deterministic annealing  
 				nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5, # convergence settings for matrix and loglik
-				pprogress=FALSE, pwarning=TRUE, stochastic = FALSE)  # progress settings 
+				pprogress=FALSE, pwarning=TRUE, stochastic = FALSE, seed=123)  # progress settings 
 {
-
 	# Do some sanity checks. 
-	if (is.null(data)) stop('Hey, we need some data, please! data is null')
-	if (!is.matrix(data)) stop('The data needs to be in matrix form')
-	if (!is.numeric(data)) stop('The data is required to be numeric')
-	if (nrow(data) == 1) stop('nrow(data) is equal to 1')
-	if (ncol(data) == 1) stop('ncol(data) is equal to 1; This function currently only works with multivariate data p > 1')
-	
+	if (is.null(data)) stop('Argument data is null. Cannot proceed without data.')
+	if (!is.matrix(data)) stop('The data must be in matrix form.')
+	if (!is.numeric(data)) stop('The data must be be numeric.')
+	if (nrow(data) == 1) stop('Cannot proceed because nrow(data)=1.')
+	if (ncol(data) == 1) stop('Cannot proceed because ncol(data)=1.')
+
+	# set seed for initializations.  
+	set.seed(seed) 	
+
 	# check for full NAs vector. as mixture version 1.6+ can handle missing data.  
 	apply(data,1,checkNA)
 

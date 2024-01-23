@@ -1,8 +1,8 @@
 Package: mixture
 Type: Package
 Title: Mixture Models for Clustering and Classification
-Version: 2.0.6
-Date: 2023-09-26
+Version: 2.1.0
+Date: 2024-01-22
 Authors@R: c(person("Nik", "Pocuca", role=c("aut"), comment = c(ORCID = "0000-0001-8365-0751")), 
             person("Ryan P.", "Browne", role = c("aut"), comment = c(ORCID = "0000-0003-4543-0218")),
             person("Paul D.", "McNicholas", role = c("aut", "cre"), email = "mcnicholas@math.mcmaster.ca", comment = c(ORCID = "0000-0002-2482-523X")))
@@ -19,5 +19,5 @@ SystemRequirements: GNU GSL
 Author: Nik Pocuca [aut] (<https://orcid.org/0000-0001-8365-0751>),
   Ryan P. Browne [aut] (<https://orcid.org/0000-0003-4543-0218>),
   Paul D. McNicholas [aut, cre] (<https://orcid.org/0000-0002-2482-523X>)
-Packaged: 2023-09-26 16:06:07 UTC; paul
-Date/Publication: 2023-09-26 17:10:07 UTC
+Packaged: 2024-01-22 21:21:41 UTC; paul
+Date/Publication: 2024-01-23 15:00:10 UTC

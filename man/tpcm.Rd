@@ -8,7 +8,8 @@ tpcm(data=NULL, G=1:3, mnames=NULL,
 		start=2, label=NULL, 
 		veo=FALSE, da=c(1.0),
 		nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5,
-		pprogress=FALSE, pwarning=FALSE, stochastic=FALSE, constrained = FALSE) 
+		pprogress=FALSE, pwarning=FALSE, stochastic=FALSE, 
+		constrained = FALSE, seed=123) 
 }
 \arguments{
   \item{data}{
@@ -63,6 +64,9 @@ A matrix or data frame such that rows correspond to observations and columns cor
 }
 \item{constrained}{
 	If \code{TRUE}, it will constrain the degrees of freedom for student-t to be the same for all clusters. 
+}
+  \item{seed}{
+	The seed for the run, default is 123
 }
 }
 \details{

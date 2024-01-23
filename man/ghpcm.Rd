@@ -8,7 +8,7 @@ ghpcm(data=NULL, G=1:3, mnames=NULL,
 		start=2, label=NULL, 
 		veo=FALSE, da=c(1.0),
 		nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5,
-		pprogress=FALSE, pwarning=FALSE, stochastic = FALSE) 
+		pprogress=FALSE, pwarning=FALSE, stochastic = FALSE, seed=123) 
 }
 \arguments{
   \item{data}{
@@ -60,6 +60,9 @@ A matrix or data frame such that rows correspond to observations and columns cor
 }
   \item{stochastic}{
 	If \code{TRUE} , it will run stochastic E step variant. 
+}
+ \item{seed}{
+	The seed for the run, default is 123
 }
 }
 \details{

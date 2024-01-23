@@ -8,7 +8,7 @@ pcm <- function(data=NULL,  G=1:3, pcmfamily=c(gpcm,vgpcm,tpcm), # just pass in 
                 start=2, label=NULL, # starting inputs , start = 0: random soft, start = 2, random hard. start = 3 mkmeans. 
                 veo=FALSE, da=c(1.0), # veo (variables exceed observations), da is deterministic annealing  
                 nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5, # convergence settings for matrix and loglik
-                pprogress=FALSE, pwarning=FALSE) 
+                pprogress=FALSE, pwarning=FALSE, seed=123) 
   
 {
   # the functions already have sanity checks so all I have to do is figure out 
@@ -21,7 +21,7 @@ pcm <- function(data=NULL,  G=1:3, pcmfamily=c(gpcm,vgpcm,tpcm), # just pass in 
   {
       results = pc_function(data=data,G=G,mnames=mnames,start=start,label=label,veo=veo,
                             da=da,nmax=nmax,atol=atol,mtol=mtol,mmax=mmax,burn=burn,pprogress=pprogress,
-                            pwarning=pwarning)
+                            pwarning=pwarning, seed=seed)
       if(is(results,"gpcm")){
         all_results <- append(all_results, list("gpcm" = results))
       }

@@ -5,7 +5,7 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
                   veo=FALSE, da=c(1.0), # veo (variables exceed observations), da is deterministic annealing  
                   nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5, # convergence settings for matrix and loglik
                   pprogress=FALSE, pwarning=FALSE, stochastic = FALSE,
-                  latent_method = "standard")  # progress settings 
+                  latent_method = "standard", seed=123)  # progress settings 
 {
   
   # Do some sanity checks. 
@@ -17,6 +17,9 @@ stpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
   # check for full NAs vector. as mixture version 1.6+ can handle missing data.  
   apply(data,1,checkNA)
   
+  # set the seed. 
+  set.seed(seed)
+
   # some more sanity checks. 
   if (is.null(G)) stop('G is NULL')
   G = as.integer(ceiling(G))

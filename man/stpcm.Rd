@@ -9,7 +9,7 @@ stpcm(data=NULL, G=1:3, mnames=NULL,
 		veo=FALSE, da=c(1.0),
 		nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5,
 		pprogress=FALSE, pwarning=FALSE, 
-		stochastic = FALSE, latent_method="standard") 
+		stochastic = FALSE, latent_method="standard", seed=123) 
 }
 \arguments{
   \item{data}{
@@ -65,7 +65,9 @@ A matrix or data frame such that rows correspond to observations and columns cor
   \item{latent_method}{
     	If \code{"standard"}, it will use the standard E step for latent variable of a Normal Variance Mean Mixture, if \code{"random"} it will run a random draw from a GIG distribution.
 }
-
+  \item{seed}{
+	The seed for the run, default is 123
+}
 }
 \details{
 The data \code{x} are either clustered or classified using Skew-t mixture models with some or all of the 14 parsimonious covariance structures described in Celeux & Govaert (1995). The algorithms given by Celeux & Govaert (1995) is used for 12 of the 14 models; the "EVE" and "VVE" models use the algorithms given in Browne & McNicholas (2014). Starting values are very important to the successful operation of these algorithms and so care must be taken in the interpretation of results. 

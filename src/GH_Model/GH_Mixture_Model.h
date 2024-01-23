@@ -510,11 +510,9 @@ bool GH_Mixture_Model::check_aitkens(void) {
           a_t = 0.0; 
         }
         double l_Inf = l_t + (l_p1 - l_t)/(1.0-a_t);
-        double val = abs((l_Inf - l_t));
-
-
-
-        return (bool)(val < tol_l);
+        double val = (l_Inf - l_t);
+        bool aitkens_check = (0.0 <= val ) & (val < tol_l);
+        return aitkens_check;
 }
 
 

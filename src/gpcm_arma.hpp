@@ -891,13 +891,14 @@ bool Mixture_Model::track_lg(bool check)
 
     //checking aitkens convergence criterion 
     int last_index = logliks.size()-1;
-    double l_p1 =  logliks[last_index];
-    double l_t =  logliks[last_index-1];
-    double l_m1 = logliks[last_index-2];
+    double l_p1 =  logliks[last_index-1];
+    double l_t =  logliks[last_index-2];
+    double l_m1 = logliks[last_index-3];
     double a_t = (l_p1 - l_t)/(l_t - l_m1);
     double l_Inf = l_t + (l_p1 - l_t)/(1.0-a_t);
-    double val = std::abs((l_Inf - l_t));
-    return (bool)(val < tol_l); 
+    double val = (l_Inf - logliks[last_index]);
+    bool aitkens_check = (0.0 <= val ) & (val < tol_l);
+    return aitkens_check;
   }
 }
 
@@ -1680,6 +1681,16 @@ void VVE::m_step_sigs(void){
     A_gs[g] = A_gs[g]/denom;
   }
 
+
+  // mstep lambda, or volume
+  arma::vec volume_gs = arma::vec(G, arma::fill::zeros);
+  for(int g = 0; g < G; g++)
+  {
+    arma::mat invA = arma::diagmat(1.0/A_gs[g]);
+    arma::mat matrix_product_D_Wk_D_invA = (D.t() * Ws[g] * D * invA);
+    volume_gs[g] = arma::trace(matrix_product_D_Wk_D_invA) / (n_gs[g] * p);
+  }
+
   // ******** BEGIN INTIALIZATION of MM *************** 
 
   // MM pt. 1
@@ -1702,6 +1713,7 @@ void VVE::m_step_sigs(void){
     lambda_g = arma::max(eigens); 
     ADK = arma::diagmat(1.0/A_gs[g]) * D.t();
     interZ += (ADK * W_temp_g[g]) - (lambda_g *ADK);  
+    interZ /= volume_gs[g];
   }
 
   // svd calculation 
@@ -1718,7 +1730,8 @@ void VVE::m_step_sigs(void){
   for(int g = 0; g < G; g++)
   {
     lambda_g = arma::max(1.0/A_gs[g]);
-    interZ +=  W_temp_g[g] * D * arma::diagmat(1.0/A_gs[g]) - lambda_g * (W_temp_g[g] * D); 
+    interZ +=  W_temp_g[g] * D * arma::diagmat(1.0/A_gs[g]) - lambda_g * (W_temp_g[g] * D);
+    interZ /= volume_gs[g]; 
   }
 
   // calculate svd and set new D. 
@@ -1759,6 +1772,16 @@ void VVE::m_step_sigs(void){
       double denom = pow(arma::prod(A_gs[g]), ((double)((1.0)/((A_gs[g].size())))) );
       A_gs[g] = A_gs[g]/denom;
     }
+
+    // mstep lambda, or volume
+    volume_gs = arma::vec(G, arma::fill::zeros);
+    for(int g = 0; g < G; g++)
+    {
+      arma::mat invA = arma::diagmat(1.0/A_gs[g]);
+      arma::mat matrix_product_D_Wk_D_invA = (D.t() * Ws[g] * D * invA);
+      volume_gs[g] = arma::trace(matrix_product_D_Wk_D_invA) / (n_gs[g] * p);
+    }
+
     // calculate new D 
     
     // MM pt. 1
@@ -1780,7 +1803,8 @@ void VVE::m_step_sigs(void){
       arma::eig_sym(eigens, L_g, W_temp_g[g],"std");
       lambda_g = arma::max(eigens); 
       ADK = arma::diagmat(1.0/A_gs[g]) * D.t();
-      interZ += (ADK * W_temp_g[g]) - (lambda_g *ADK);  
+      interZ += (ADK * W_temp_g[g]) - (lambda_g *ADK);
+      interZ /= volume_gs[g];
     }
 
     // svd calculation 
@@ -1798,6 +1822,7 @@ void VVE::m_step_sigs(void){
     {
       lambda_g = arma::max(1.0/A_gs[g]);
       interZ +=  W_temp_g[g] * D * arma::diagmat(1.0/A_gs[g]) - lambda_g * (W_temp_g[g] * D); 
+      interZ /= volume_gs[g];
     }
 
     // calculate svd and set new D. 

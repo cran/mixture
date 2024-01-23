@@ -502,8 +502,9 @@ bool ST_Mixture_Model::check_aitkens(void) {
         double l_m1 = logliks[last_index-3];
         double a_t = (l_p1 - l_t)/(l_t - l_m1);
         double l_Inf = l_t + (l_p1 - l_t)/(1.0-a_t);
-        double val = std::abs((l_Inf - l_t));
-        return (bool)(val < tol_l);
+        double val = (l_Inf - l_t);
+        bool aitkens_check = (0.0 <= val ) & (val < tol_l);
+        return aitkens_check;
 }
 
 
