@@ -10,8 +10,8 @@ An implementation of 14 parsimonious clustering models for finite mixtures with 
 \tabular{ll}{
 Package: \tab mixture \cr
 Type: \tab Package\cr
-Version: \tab 2.1.0\cr
-Date: \tab 2024-01-22\cr
+Version: \tab 2.1.1\cr
+Date: \tab 2024-01-29\cr
 License: \tab GPL (>=2)\cr
 }
 This package contains the functions \code{gpcm}, \code{tpcm}, \code{ghpcm}, \code{vgpcm}, \code{stpcm}, \code{e_step}, \code{ARI}, and \code{get_best_model}, plus three simulated data sets.

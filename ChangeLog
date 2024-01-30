@@ -1,4 +1,7 @@
-mixture version 2.1.0 2024-01-19: 
+mixture version 2.1.1 2024-01-29: 
+- In R/*.R files if(start>2) is replaced by	if(startobject==“multi”) 
+
+mixture version 2.1.0 2024-01-22: 
 - The user can now set a random seed set for all pcm functions (default is set to 123). 
 - Stopping criterion (based on Aitken's acceleration) specified to be within [0,tol_l).
 - VVE update modified. 
