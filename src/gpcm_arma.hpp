@@ -897,6 +897,7 @@ bool Mixture_Model::track_lg(bool check)
     double a_t = (l_p1 - l_t)/(l_t - l_m1);
     double l_Inf = l_t + (l_p1 - l_t)/(1.0-a_t);
     double val = (l_Inf - logliks[last_index]);
+    //Rcpp::Rcout  << tol_l << std::endl;  
     bool aitkens_check = (0.0 <= val ) & (val < tol_l);
     return aitkens_check;
   }
@@ -2152,6 +2153,14 @@ Rcpp::List main_loop(arma::mat X, // data
   }
 
   m->set_E_step(stochastic_check); 
+  
+  if(isnan(in_l_tol)){
+    m->tol_l = 1e-6;
+  }
+  else{
+    m->tol_l = in_l_tol;
+    // Rcpp::Rcout << in_l_tol << std::endl;  
+  }
 
   // Intialize 
   m->zi_gs = in_zigs;

@@ -1,3 +1,6 @@
+mixture version 2.1.2 2025-05-06:
+- Fixed an atol bug in gpcm.
+
 mixture version 2.1.1 2024-01-29: 
 - In R/*.R files if(start>2) is replaced by	if(startobject==“multi”) 
 

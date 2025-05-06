@@ -2,7 +2,7 @@
 \alias{pcm}
 \title{Parsimonious Clustering Models}
 \description{
-Carries out model-based clustering or classification using some or all of the 14 parsimonious settings with any one of the GPCM,STPCM,VGPCM, or GHPCM families.}
+Carries out model-based clustering or classification using some or all of the 14 parsimonious settings with any one of the GPCM, STPCM, VGPCM, or GHPCM families.}
 \usage{
 pcm(data=NULL, G=1:3, pcmfamily=c(gpcm,vgpcm,tpcm),
 		mnames=NULL, start=2, label=NULL, 

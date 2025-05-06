@@ -1,5 +1,5 @@
-d4fe852dd84b18c63c7b17d6a7ccfb97 *ChangeLog
-5ab87bdf99e49409d7e2c4001c8ed52d *DESCRIPTION
+c15e7018ffa11512a2f4e180dfb8c767 *ChangeLog
+401efa7e755ffd49c6a2f8255cef457d *DESCRIPTION
 d592df5d1ea67350268bf7eab2361a54 *NAMESPACE
 334f1fc8f09a51c541dd0fae2e2f0c29 *R/RcppExports.R
 839e416188b78e2639f5434fb5374550 *R/gh_mixture.R
@@ -25,8 +25,8 @@ b2660dd4b0af15977a8fbd1339e39999 *man/main_loop_gh.Rd
 2e73167ddede3bfdd4395ced203ad89f *man/main_loop_st.Rd
 62f8eb7f4d954cd4509cf6c5350ce5d8 *man/main_loop_t.Rd
 b8c9c0fa2b4b80abfbf0174eec5e1102 *man/main_loop_vg.Rd
-a7255001b37fa0526757642e8822789e *man/mixture.Rd
-fd6b7ed44bd677799c612bd163c1f90c *man/pcm.Rd
+3d78c009874049dc3a23ce8eb30e5035 *man/mixture.Rd
+5188369d67626362fad2ab7f0955073d *man/pcm.Rd
 8e455a09fe0247e40e4179991638914b *man/stpcm.Rd
 9bbee03e608d80ab82b3b340c161240e *man/sx2.Rd
 98e5449f657b67440c81bf5b531c3521 *man/sx3.Rd
@@ -94,7 +94,7 @@ ce95b64630c028d8066b87a824e9ea6a *src/VG_Model/VG_VVE.hpp
 06c38fbc3c6a0dac380e75f1f1dcf9d0 *src/VG_Model/VG_VVI.hpp
 91b1aaeb9db6b18a1341ac95278a864c *src/VG_Model/VG_VVV.hpp
 aba4bd9f7eeb5871faa12e05ffe508cb *src/ghpcm_arma.hpp
-17d3c7ba5ab6de2dc32fd42a413bd4f8 *src/gpcm_arma.hpp
+7d0e28e4f04a621dd9178ee13471919e *src/gpcm_arma.hpp
 505b2e5b6a834ef34a9eddebcf5a7713 *src/pcm.cpp
 34b7a0df7672bee719444ef16a481a87 *src/stpcm_arma.hpp
 277e4b0085e49d569b146a8208a12d72 *src/tpcm_arma.hpp
