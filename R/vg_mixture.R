@@ -4,7 +4,7 @@ vgpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 				start=2, label=NULL, # starting inputs , start = 0: random soft, start = 2, random hard. start = 3 mkmeans.
 				veo=FALSE, da=c(1.0), # veo (variables exceed observations), da is deterministic annealing
 				nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5, # convergence settings for matrix and loglik
-				pprogress=FALSE, pwarning=FALSE, stochastic = FALSE, latent_method = "standard", seed=123)  # progress settings
+				pprogress=FALSE, pwarning=TRUE, stochastic = FALSE, latent_method = "standard", seed=123)  # progress settings
 {
 
 	# Do some sanity checks.
@@ -90,7 +90,7 @@ vgpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 	if(!is.numeric(burn)){ stop("burn-in setting has to be a number")}
 	if(round(burn) <= 0) { stop("burn-in setting has to be a positive round number")}
 	if(burn != round(burn)){
-		if(!pwarning){
+		if(pwarning){
 			warning("Warning: rounding burn-in setting number")
 		}
 		burn <- round(burn)
@@ -119,11 +119,12 @@ vgpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames bein
 
 			if(number_of_params > n){
 				if(veo){
-					if(!pwarning){
+					if(pwarning){
 					warning("Model: ",model_name , " G: " , G_i ," ","Number of Parameters exceed number of observations.\n")
 					}
 				}else{
 					check_veo <- FALSE
+					print("Model: ",model_name , " G: " , G_i ," ","Number of Parameters exceed number of observations.\n Set veo = TRUE.\n")
 				}
 			}
 
@@ -322,7 +323,7 @@ plot.vgpcm<- function(x, ...) {
 
 
 
-# Print output for the gpcm_best class.
+# Print output for the vgpcm_best class.
 print.vgpcm_best <-function(x, ...){
 
 	splitted_strings  <- strsplit(x$model_type," ")[[1]]

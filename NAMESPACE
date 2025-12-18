@@ -29,7 +29,10 @@ export(z_ig_kmeans)
 export(MAP)
 export(ARI)
 export(pcm)
-
+export(dmvg)
+export(dmst)
+export(dmgh)
+export(dmg)
 
 S3method(print, pcm)
 S3method(summary, pcm)

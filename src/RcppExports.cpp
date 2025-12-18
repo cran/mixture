@@ -12,6 +12,69 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// dmg
+Rcpp::List dmg(arma::rowvec x, arma::rowvec mu, arma::mat Sig, bool LOG);
+RcppExport SEXP _mixture_dmg(SEXP xSEXP, SEXP muSEXP, SEXP SigSEXP, SEXP LOGSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::rowvec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::rowvec >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Sig(SigSEXP);
+    Rcpp::traits::input_parameter< bool >::type LOG(LOGSEXP);
+    rcpp_result_gen = Rcpp::wrap(dmg(x, mu, Sig, LOG));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dmgh
+Rcpp::List dmgh(arma::vec x, arma::vec mu, arma::vec alpha, arma::mat Sig, double omega, double lambda, bool LOG);
+RcppExport SEXP _mixture_dmgh(SEXP xSEXP, SEXP muSEXP, SEXP alphaSEXP, SEXP SigSEXP, SEXP omegaSEXP, SEXP lambdaSEXP, SEXP LOGSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Sig(SigSEXP);
+    Rcpp::traits::input_parameter< double >::type omega(omegaSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< bool >::type LOG(LOGSEXP);
+    rcpp_result_gen = Rcpp::wrap(dmgh(x, mu, alpha, Sig, omega, lambda, LOG));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dmst
+Rcpp::List dmst(arma::vec x, arma::vec mu, arma::vec alpha, arma::mat Sig, double v, bool LOG);
+RcppExport SEXP _mixture_dmst(SEXP xSEXP, SEXP muSEXP, SEXP alphaSEXP, SEXP SigSEXP, SEXP vSEXP, SEXP LOGSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Sig(SigSEXP);
+    Rcpp::traits::input_parameter< double >::type v(vSEXP);
+    Rcpp::traits::input_parameter< bool >::type LOG(LOGSEXP);
+    rcpp_result_gen = Rcpp::wrap(dmst(x, mu, alpha, Sig, v, LOG));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dmvg
+Rcpp::List dmvg(arma::vec x, arma::vec mu, arma::vec alpha, arma::mat Sig, double gamma, bool LOG);
+RcppExport SEXP _mixture_dmvg(SEXP xSEXP, SEXP muSEXP, SEXP alphaSEXP, SEXP SigSEXP, SEXP gammaSEXP, SEXP LOGSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Sig(SigSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< bool >::type LOG(LOGSEXP);
+    rcpp_result_gen = Rcpp::wrap(dmvg(x, mu, alpha, Sig, gamma, LOG));
+    return rcpp_result_gen;
+END_RCPP
+}
 // main_loop_gh
 Rcpp::List main_loop_gh(arma::mat X, int G, int model_id, int model_type, arma::mat in_zigs, int in_nmax, double in_l_tol, int in_m_iter_max, double in_m_tol, arma::vec anneals, int t_burn);
 RcppExport SEXP _mixture_main_loop_gh(SEXP XSEXP, SEXP GSEXP, SEXP model_idSEXP, SEXP model_typeSEXP, SEXP in_zigsSEXP, SEXP in_nmaxSEXP, SEXP in_l_tolSEXP, SEXP in_m_iter_maxSEXP, SEXP in_m_tolSEXP, SEXP annealsSEXP, SEXP t_burnSEXP) {
@@ -206,6 +269,10 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_mixture_dmg", (DL_FUNC) &_mixture_dmg, 4},
+    {"_mixture_dmgh", (DL_FUNC) &_mixture_dmgh, 7},
+    {"_mixture_dmst", (DL_FUNC) &_mixture_dmst, 6},
+    {"_mixture_dmvg", (DL_FUNC) &_mixture_dmvg, 6},
     {"_mixture_main_loop_gh", (DL_FUNC) &_mixture_main_loop_gh, 11},
     {"_mixture_gh_e_step_internal", (DL_FUNC) &_mixture_gh_e_step_internal, 7},
     {"_mixture_main_loop", (DL_FUNC) &_mixture_main_loop, 11},

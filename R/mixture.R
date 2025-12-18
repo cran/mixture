@@ -100,7 +100,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 	if(!is.numeric(burn)){ stop("burn-in setting has to be a number")}
 	if(round(burn) <= 0) { stop("burn-in setting has to be a positive round number")}
 	if(burn != round(burn)){
-		if(!pwarning){
+		if(pwarning){
 			warning("Warning: rounding burn-in setting number")
 		}
 		burn <- round(burn)
@@ -128,11 +128,12 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 
 			if(number_of_params > n){
 				if(veo){
-					if(!pwarning){
+					if(pwarning){
 					warning("Model: ",model_name , " G: " , G_i ," ","Number of Parameters exceed number of observations.\n")
 					}
 				}else{
 					check_veo <- FALSE
+					warning("Model: ",model_name , " G: " , G_i ," ","Number of Parameters exceed number of observations.\n Set veo = TRUE.")
 				}
 			}
 
@@ -294,7 +295,7 @@ gpcm <- function(data=NULL,  G=1:3, mnames=NULL, # main inputs with mnames being
 	info_matrix$z <- info_matrix$best_model$model_obj[[1]]$zigs
 
 	class(info_matrix) <- "gpcm"
-
+	
 	return(info_matrix)
 
 }

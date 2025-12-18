@@ -20,6 +20,9 @@ Nik Pocuca, Ryan P. Browne and Paul D. McNicholas.
 
 Maintainer: Paul D. McNicholas <mcnicholas@math.mcmaster.ca>
 }
+\references{
+Hubert, L. and P. Arabie (1985). Comparing partitions. \emph{Journal of Classification} \bold{2}(1), 193-218.
+}
 \examples{
 x <- sample(1:10, size = 100, replace = TRUE)
 y <- sample(1:10, size = 100, replace = TRUE)

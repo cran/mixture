@@ -8,7 +8,7 @@ pcm(data=NULL, G=1:3, pcmfamily=c(gpcm,vgpcm,tpcm),
 		mnames=NULL, start=2, label=NULL, 
 		veo=FALSE, da=c(1.0),
 		nmax=1000, atol=1e-8, mtol=1e-8, mmax=10, burn=5,
-		pprogress=FALSE, pwarning=FALSE, seed=123) 
+		pprogress=FALSE, pwarning=TRUE, seed=123) 
 }
 \arguments{
   \item{data}{

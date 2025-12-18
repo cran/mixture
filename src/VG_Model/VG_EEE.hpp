@@ -1,5 +1,4 @@
 
-
 #pragma once
 class VG_EEE: public VG_Mixture_Model
 {    
